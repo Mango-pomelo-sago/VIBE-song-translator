@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- 黑胶盘面 -->
+  <circle cx="32" cy="32" r="30" fill="#16071f"/>
+  <circle cx="32" cy="32" r="30" fill="none" stroke="#2a1240" stroke-width="3"/>
+  <!-- 唱片纹路 -->
+  <circle cx="32" cy="32" r="24" fill="none" stroke="#2b1055" stroke-width="1.5" opacity="0.8"/>
+  <circle cx="32" cy="32" r="20" fill="none" stroke="#2b1055" stroke-width="1.5" opacity="0.7"/>
+  <circle cx="32" cy="32" r="16" fill="none" stroke="#2b1055" stroke-width="1.5" opacity="0.6"/>
+  <!-- 中心贴纸：日落渐变 -->
+  <circle cx="32" cy="32" r="10" fill="#fdbb2d"/>
+  <circle cx="32" cy="32" r="7" fill="#e23d7e"/>
+  <circle cx="32" cy="32" r="3" fill="#fdf6ec"/>
+  <circle cx="32" cy="32" r="1.5" fill="#2a1240"/>
+  <!-- 高光 -->
+  <path d="M14 18 A26 26 0 0 1 30 4" fill="none" stroke="#fdf6ec" stroke-width="3" stroke-linecap="round" opacity="0.25"/>
+</svg>

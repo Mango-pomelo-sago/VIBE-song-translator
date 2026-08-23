@@ -1,26 +1,474 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@theme {
+  /* ── 液态玻璃 ──────────────────────────────── */
+  --color-glass-bg: rgba(255, 255, 255, 0.65);
+  --color-glass-border: rgba(255, 255, 255, 0.45);
+  --color-glass-hover: rgba(255, 255, 255, 0.75);
+  --color-glass-strong: rgba(255, 255, 255, 0.75);
+  --shadow-glass: 0 4px 24px rgba(0, 0, 0, 0.06);
+  --shadow-glass-lg: 0 16px 48px rgba(0, 0, 0, 0.15);
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  /* ── 包豪斯几何色块（夏季水色/樱粉/山吹金） ── */
+  --color-bauhaus-blue: #0284c7;
+  --color-bauhaus-red: #f472b6;
+  --color-bauhaus-yellow: #fbbf24;
+  --color-bauhaus-blue-dim: #0369a1;
+  --color-bauhaus-red-dim: #db2777;
+  --color-bauhaus-yellow-dim: #f59e0b;
+
+  /* ── 工业风 ────────────────────────────────── */
+  --color-industrial: #374151;
+  --color-industrial-light: #4b5563;
+  --color-industrial-line: rgba(55, 65, 81, 0.12);
+
+  /* ── 文字 ──────────────────────────────────── */
+  --color-ink: #1a1a1a;
+  --color-ink-light: rgba(26, 26, 26, 0.6);
+  --color-ink-lighter: rgba(26, 26, 26, 0.35);
+  --color-white-soft: rgba(255, 255, 255, 0.85);
+
+  /* ── JLPT 等级配色（夏季清爽色） ────────────── */
+  --color-jlpt-n5: #6CBE6A;
+  --color-jlpt-n4: #14b8a6;
+  --color-jlpt-n3: #f59e0b;
+  --color-jlpt-n2: #fb923c;
+  --color-jlpt-n1: #fb7185;
+  --color-jlpt-uncommon: #c084fc;
+
+  /* ── 字体 ──────────────────────────────────── */
+  --font-display: var(--font-bebas);
+  --font-lyric: var(--font-noto-serif-jp);
+  --font-sc: var(--font-noto-sans-sc);
+  --font-romaji: var(--font-geist-mono);
+  --font-sans: var(--font-noto-sans-sc);
   --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  /* ── 动效 ───────────────────────── */
+  --animate-spin-slow: spin-slow 8s linear infinite;
+  --animate-fade-up: fade-up 0.6s ease-out both;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-slide-in-right: slide-in-right 0.5s ease-out both;
+  --animate-scale-in: scale-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+  --animate-pulse-soft: pulse-soft 2.5s ease-in-out infinite;
+
+  @keyframes spin-slow {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-12px);
+    }
+  }
+
+  @keyframes slide-in-right {
+    from {
+      opacity: 0;
+      transform: translateX(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.92);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes pulse-soft {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.6;
+    }
   }
 }
 
+/* ── 夏日天空渐变背景 ──────────────────────── */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: linear-gradient(175deg, #38bdf8 0%, #7dd3fc 22%, #bae6fd 48%, #e0f2fe 78%, #f0f9ff 100%);
+  color: var(--color-ink);
+  min-height: 100vh;
+}
+
+/* ── 玻璃卡片 ──────────────────────────────── */
+.glass-card {
+  background-color: var(--color-glass-bg);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid var(--color-glass-border);
+  border-radius: 12px;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.04),
+    0 8px 32px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  color: var(--color-ink);
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.glass-card:hover {
+  background-color: var(--color-glass-hover);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.08),
+    0 16px 48px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* ── 包豪斯按钮 ────────────────────────────── */
+.bauhaus-btn {
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.875rem;
+  padding: 0.5rem 1.25rem;
+  cursor: pointer;
+  transition:
+    transform 0.1s ease,
+    box-shadow 0.1s ease;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.bauhaus-btn:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 0.15);
+}
+
+.bauhaus-btn:active:not(:disabled) {
+  transform: translate(1px, 1px);
+  box-shadow: none;
+}
+
+.bauhaus-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.bauhaus-btn-blue {
+  background-color: var(--color-bauhaus-blue);
+}
+.bauhaus-btn-blue:hover:not(:disabled) {
+  background-color: var(--color-bauhaus-blue-dim);
+}
+
+.bauhaus-btn-red {
+  background-color: var(--color-bauhaus-red);
+}
+.bauhaus-btn-red:hover:not(:disabled) {
+  background-color: var(--color-bauhaus-red-dim);
+}
+
+.bauhaus-btn-yellow {
+  background-color: var(--color-bauhaus-yellow);
+  color: var(--color-industrial);
+}
+.bauhaus-btn-yellow:hover:not(:disabled) {
+  background-color: var(--color-bauhaus-yellow-dim);
+}
+
+/* ── 工业风分割线 ──────────────────────────── */
+.industrial-divider {
+  height: 2px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--color-industrial-line) 0 8px,
+    transparent 8px 16px
+  );
+}
+
+/* ── 玻璃质感输入框 ────────────────────────── */
+.glass-input {
+  background-color: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--color-glass-border);
+  border-radius: 10px;
+  color: var(--color-ink);
+  padding: 0.625rem 1rem;
+  outline: none;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.glass-input:focus {
+  background-color: rgba(255, 255, 255, 0.45);
+  border-color: var(--color-bauhaus-blue);
+}
+
+.glass-input::placeholder {
+  color: var(--color-ink-lighter);
+}
+
+/* ── 玻璃质感模态框 ────────────────────────── */
+.glass-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fade-in 0.2s ease-out both;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.glass-modal {
+  background-color: #fff;
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid var(--color-glass-border);
+  border-radius: 16px;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.04),
+    0 8px 32px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  max-width: 90vw;
+  max-height: 85vh;
+  overflow-y: auto;
+  animation: scale-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+
+/* ── 歌词 ruby（汉字上方罗马音） ──────────── */
+.ruby-inline {
+  ruby-position: over;
+}
+
+.ruby-inline rt {
+  font-family: var(--font-romaji);
+  font-size: 0.5em;
+  font-weight: 400;
+  color: var(--color-bauhaus-blue);
+  letter-spacing: 0.03em;
+  text-transform: none;
+}
+
+/* ── 选中 ──────────────────────────────────── */
+::selection {
+  background-color: var(--color-bauhaus-blue);
+  color: #fff;
+}
+
+/* ── 单词 hover 划线（Codrops elara 风格） ──── */
+.word-hover-line {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+}
+.word-hover-line::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: currentColor;
+  pointer-events: none;
+  transform-origin: 50% 100%;
+  transition:
+    clip-path 0.3s,
+    transform 0.3s cubic-bezier(0.2, 1, 0.8, 1);
+  clip-path: polygon(
+    0% 0%, 0% 100%, 0 100%, 0 0,
+    100% 0, 100% 100%, 0 100%, 0 100%,
+    100% 100%, 100% 0%
+  );
+}
+.word-hover-line:hover::before {
+  transform: translate3d(0, 2px, 0) scale3d(1.08, 3, 1);
+  clip-path: polygon(
+    0% 0%, 0% 100%, 50% 100%, 50% 0,
+    50% 0, 50% 100%, 50% 100%, 0 100%,
+    100% 100%, 100% 0%
+  );
+}
+.word-hover-line-text {
+  display: inline-block;
+  transition: transform 0.3s cubic-bezier(0.2, 1, 0.8, 1);
+}
+.word-hover-line:hover .word-hover-line-text {
+  transform: translate3d(0, -2px, 0);
+}
+
+/* ── 滚动条 ──────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.25);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 189, 248, 0.4);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+/* ── SDF 镜头模糊画布容器 ───────────────────── */
+.sdf-canvas-container {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+/* ── 粘性效果容器 ───────────────────────────── */
+.gooey-container {
+  display: inline-flex;
+  width: 100%;
+}
+
+.gooey-container > * {
+  will-change: transform;
+}
+
+/* ── Gooey 搜索：原版 Codrops 粘性两态交互 ──────── */
+.gooey-search {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gooey-search.no-goo .gooey-inner {
+  filter: none !important;
+}
+.gooey-search.no-goo .gs-btn {
+  padding: 5px 10px;
+}
+.gooey-search.no-goo .gs-separate {
+  width: 36px;
+  height: 36px;
+}
+
+.gooey-stage {
+  position: relative;
+}
+
+.gooey-inner {
+  filter: url(#goo-effect);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  max-width: max-content;
+}
+
+.gs-btn {
+  color: #1a1a1a;
+  cursor: pointer;
+  letter-spacing: -0.5px;
+  background-color: #ffffff;
+  outline: none;
+  border: none;
+  border-radius: 9999px;
+  padding: 10px 20px;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+.gs-text {
+  pointer-events: none;
+  text-align: center;
+  position: relative;
+  left: 4px;
+  white-space: nowrap;
+}
+
+.gs-form {
+  width: 100%;
+}
+
+.gs-input {
+  width: 100%;
+  background-color: transparent;
+  outline: none;
+  border: none;
+  color: #1a1a1a;
+  font-size: 14px;
+}
+
+.gs-input::placeholder {
+  color: rgba(26, 26, 26, 0.45);
+}
+
+.gs-separate {
+  position: absolute;
+  background-color: #ffffff;
+  width: 46px;
+  height: 46px;
+  right: -5px;
+  top: -1px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 9999px;
+  color: #1a1a1a;
+  z-index: 2;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+.gs-separate svg {
+  width: 20px;
+  height: 20px;
+}
+
+.gs-separate .loading-icon {
+  animation: gs-rotate 0.5s linear infinite;
+  transform-origin: center center;
+}
+
+@keyframes gs-rotate {
+  100% {
+    transform: rotate(180deg);
+  }
 }
