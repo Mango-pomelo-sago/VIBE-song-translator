@@ -1,4 +1,5 @@
 import { chat } from "./ai";
+import type { ResolvedAiConfig } from "./ai";
 import type { NeteaseSong } from "./types";
 
 /** 待翻译的一行（缺失 tlyric） */
@@ -11,8 +12,14 @@ const CHUNK = 25; // 每块行数，避免单次超长 / 截断
 const HARD_LIMIT = 120; // 每曲硬上限（成本护栏）
 const MAX_SONGS = 40; // 服务端内存缓存歌曲数
 
-// 服务端内存缓存：translate:{songId} → TranslationMap
+// 服务端内存缓存：translate:{songId}[:{baseUrl}|{model}] → TranslationMap
 const CACHE = new Map<string, TranslationMap>();
+
+/** 缓存指纹：只含供应商与模型（绝不含 key）；未传 config 时保持旧键。 */
+function cacheKey(songId: number, config?: ResolvedAiConfig): string {
+  const base = `translate:${songId}`;
+  return config ? `${base}:${config.baseUrl}|${config.model}` : base;
+}
 
 const SYSTEM_PROMPT =
   "你是专业的日文歌词翻译。将用户提供的每行日文歌词翻译成简体中文。" +
@@ -53,6 +60,7 @@ export async function translateMissingLines(
   song: Pick<NeteaseSong, "id" | "name">,
   artists: string,
   missing: MissingLine[],
+  config?: ResolvedAiConfig,
 ): Promise<TranslationMap> {
   // 去重 + 去空行 + 硬上限
   const seen = new Set<number>();
@@ -65,8 +73,8 @@ export async function translateMissingLines(
   if (uniq.length === 0) return new Map();
   const capped = uniq.slice(0, HARD_LIMIT);
 
-  const cacheKey = `translate:${song.id}`;
-  const cached = CACHE.get(cacheKey);
+  const key = cacheKey(song.id, config);
+  const cached = CACHE.get(key);
   if (cached) return cached;
 
   const result: TranslationMap = new Map();
@@ -82,7 +90,7 @@ export async function translateMissingLines(
             '\n请以 JSON 返回：{"translations":[{"index":<编号>,"zh":"翻译"}]}',
         },
       ],
-      { temperature: 0.2, json: true, maxTokens: 2000 },
+      { temperature: 0.2, json: true, maxTokens: 2000, config },
     );
     for (const [idx, zh] of parseResponse(raw)) {
       result.set(idx, zh);
@@ -94,13 +102,16 @@ export async function translateMissingLines(
       const oldest = CACHE.keys().next().value;
       if (oldest !== undefined) CACHE.delete(oldest);
     }
-    CACHE.set(cacheKey, result);
+    CACHE.set(key, result);
   }
   return result;
 }
 
-export function hasTranslateCache(songId: number): boolean {
-  return CACHE.has(`translate:${songId}`);
+export function hasTranslateCache(
+  songId: number,
+  config?: ResolvedAiConfig,
+): boolean {
+  return CACHE.has(cacheKey(songId, config));
 }
 
 /** 清空缓存（测试用） */

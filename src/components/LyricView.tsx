@@ -3,6 +3,7 @@
 import type { SongData } from "@/lib/types";
 import { isContentWord } from "@/lib/parts";
 import { useDisplayPrefs } from "./DisplayPrefs";
+import { useAiSettings } from "./AiSettings";
 import RubyText from "./RubyText";
 import BunsetsuRomajiLine from "./BunsetsuRomajiLine";
 import TokenWord from "./TokenWord";
@@ -15,8 +16,12 @@ import {
 /** 歌词视图：每行内嵌 grid 双栏，日文歌词与中文翻译天然对齐 */
 export default function LyricView({ data }: { data: SongData }) {
   const { prefs } = useDisplayPrefs();
+  const { open: openAiSettings } = useAiSettings();
   const showBunsetsu = prefs.showBunsetsu;
   const transState = useLineTranslations(data.song, data.lines);
+  const needsAiConfig =
+    transState.errorCode === "ai_not_configured" ||
+    transState.errorCode === "ai_auth_failed";
 
   return (
     <div className="glass-card relative p-4 sm:p-6">
@@ -62,12 +67,22 @@ export default function LyricView({ data }: { data: SongData }) {
 
         {/* 翻译失败重试 */}
         {transState.status === "error" ? (
-          <button
-            onClick={() => transState.run()}
-            className="mt-2 text-xs font-semibold text-bauhaus-blue underline underline-offset-2"
-          >
-            AI 翻译失败（{transState.errorMsg ?? "重试"}），点击重试
-          </button>
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+            <button
+              onClick={() => transState.run()}
+              className="font-semibold text-bauhaus-blue underline underline-offset-2"
+            >
+              AI 翻译失败（{transState.errorMsg ?? "重试"}），点击重试
+            </button>
+            {needsAiConfig ? (
+              <button
+                onClick={openAiSettings}
+                className="rounded border border-glass-border bg-glass-bg px-2 py-0.5 font-semibold text-ink/70 transition-colors hover:bg-glass-hover"
+              >
+                去配置
+              </button>
+            ) : null}
+          </div>
         ) : null}
       </div>
     </div>

@@ -3,6 +3,8 @@ import { lookupWithFallback } from "@/lib/dictionary";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// 单次 Jisho 查询
+export const maxDuration = 15;
 
 /** GET /api/dictionary?word=词&fallback=基本形 → { ok, found, entry } */
 export async function GET(req: NextRequest) {

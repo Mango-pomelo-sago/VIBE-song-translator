@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { GraduationCap, ChevronDown } from "lucide-react";
+import { aiConfigHeaders, loadAiConfig } from "@/lib/ai-config";
 import type { LearningNotes } from "@/lib/notes";
 import type { NeteaseSong, ProcessedLine } from "@/lib/types";
+import { useAiSettings } from "./AiSettings";
 import SdfLensBlur from "./SdfLensBlur";
 
 // 客户端内存缓存：同一首歌折叠再展开不重新请求
@@ -23,13 +25,20 @@ export default function LearningNotesPanel({
     () => clientCache.get(song.id) ?? null,
   );
   const [error, setError] = useState("");
+  const [errorCode, setErrorCode] = useState<string | null>(null);
+  const { open: openAiSettings } = useAiSettings();
 
   async function load() {
     setStatus("loading");
+    setErrorCode(null);
     try {
       const res = await fetch("/api/notes", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          // 请求时同步读取本机配置，保存设置后重试立即生效
+          ...aiConfigHeaders(loadAiConfig()),
+        },
         body: JSON.stringify({
           songId: song.id,
           title: song.name,
@@ -37,8 +46,16 @@ export default function LearningNotesPanel({
           lines,
         }),
       });
-      const data = (await res.json()) as { ok: boolean; error?: string; notes?: LearningNotes };
-      if (!data.ok || !data.notes) throw new Error(data.error ?? "笔记生成失败");
+      const data = (await res.json()) as {
+        ok: boolean;
+        code?: string;
+        error?: string;
+        notes?: LearningNotes;
+      };
+      if (!data.ok || !data.notes) {
+        setErrorCode(data.code ?? null);
+        throw new Error(data.error ?? "笔记生成失败");
+      }
       clientCache.set(song.id, data.notes);
       setNotes(data.notes);
       setStatus("ok");
@@ -47,6 +64,9 @@ export default function LearningNotesPanel({
       setStatus("error");
     }
   }
+
+  const needsAiConfig =
+    errorCode === "ai_not_configured" || errorCode === "ai_auth_failed";
 
   function toggle() {
     if (open) {
@@ -93,12 +113,22 @@ export default function LearningNotesPanel({
             ) : status === "error" ? (
               <div className="py-2 text-sm">
                 <p className="text-ink/60">{error}</p>
-                <button
-                  onClick={() => void load()}
-                  className="mt-2 text-xs font-semibold text-bauhaus-blue underline underline-offset-2"
-                >
-                  点击重试
-                </button>
+                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+                  <button
+                    onClick={() => void load()}
+                    className="text-xs font-semibold text-bauhaus-blue underline underline-offset-2"
+                  >
+                    点击重试
+                  </button>
+                  {needsAiConfig ? (
+                    <button
+                      onClick={openAiSettings}
+                      className="rounded border border-glass-border bg-glass-bg px-2 py-0.5 text-xs font-semibold text-ink/70 transition-colors hover:bg-glass-hover"
+                    >
+                      去配置
+                    </button>
+                  ) : null}
+                </div>
               </div>
             ) : notes ? (
               <div className="space-y-4">

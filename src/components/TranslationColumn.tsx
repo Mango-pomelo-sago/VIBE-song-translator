@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { aiConfigHeaders, loadAiConfig } from "@/lib/ai-config";
 import type { NeteaseSong, ProcessedLine } from "@/lib/types";
 
 /**
@@ -15,6 +16,8 @@ export type TranslationState = {
   aiIndexes: Set<number>;
   status: "idle" | "loading" | "done" | "error";
   errorMsg: string | null;
+  /** 服务端错误码，如 ai_not_configured / ai_auth_failed */
+  errorCode: string | null;
   run: () => void;
   /** 该行是否在等待 AI 补齐 */
   waiting: (index: number) => boolean;
@@ -28,6 +31,7 @@ export function useLineTranslations(
   const [aiIndexes, setAiIndexes] = useState<Set<number>>(() => new Set());
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
   const missingRef = useRef<Set<number>>(new Set());
   const attempted = useRef(false);
 
@@ -36,6 +40,7 @@ export function useLineTranslations(
   const run = useCallback(async () => {
     setStatus("loading");
     setErrorMsg(null);
+    setErrorCode(null);
     const payload = {
       songId: song.id,
       songName: song.name,
@@ -43,18 +48,24 @@ export function useLineTranslations(
       missing: missing.map((l) => ({ index: l.index, text: l.text })),
     };
     try {
+      // 请求时同步读取本机配置，保证设置保存后重试立即生效（不依赖 Provider 加载时序）
       const res = await fetch("/api/translate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...aiConfigHeaders(loadAiConfig()),
+        },
         body: JSON.stringify(payload),
       });
       const data = (await res.json()) as {
         ok: boolean;
+        code?: string;
         error?: string;
         translations?: Array<{ index: number; zh: string }>;
       };
       if (!data.ok) {
         setErrorMsg(data.error ?? "AI 翻译失败");
+        setErrorCode(data.code ?? null);
         setStatus("error");
         return;
       }
@@ -91,6 +102,7 @@ export function useLineTranslations(
     aiIndexes,
     status,
     errorMsg,
+    errorCode,
     run,
     waiting: (index) =>
       status === "loading" && missingRef.current.has(index),

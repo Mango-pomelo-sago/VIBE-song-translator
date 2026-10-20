@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isConfigured } from "@/lib/ai";
+import {
+  describeAiError,
+  readAiConfigHeaders,
+  resolveServerAiConfig,
+} from "@/lib/ai-config-server";
+import type { ResolvedAiConfig } from "@/lib/ai";
 import { translateMissingLines } from "@/lib/translate";
 import type { MissingLine } from "@/lib/translate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// HARD_LIMIT/CHUNK = 最多 5 段 × 30s 超时 ≈ 150s；Hobby 上限同为 300s
+export const maxDuration = 300;
 
 /** POST /api/translate { songId, songName, artists, missing: [{index,text}] }
+ *  可选请求头 x-ai-api-key / x-ai-base-url / x-ai-model（用户在「AI 设置」里配置）。
  *  DeepSeek 批量补齐缺失翻译；缓存命中直接返回。 */
 export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => null)) as {
@@ -27,9 +35,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, translations: [] });
   }
 
-  if (!isConfigured()) {
+  let config: ResolvedAiConfig | null;
+  try {
+    config = resolveServerAiConfig(readAiConfigHeaders(req.headers));
+  } catch (e) {
+    const failure = describeAiError(e, "AI 配置无效");
     return NextResponse.json(
-      { ok: false, error: "服务端未配置 DEEPSEEK_API_KEY，无法 AI 翻译" },
+      { ok: false, code: failure.code, error: failure.error },
+      { status: failure.status },
+    );
+  }
+  if (!config) {
+    return NextResponse.json(
+      {
+        ok: false,
+        code: "ai_not_configured",
+        error: "未配置 AI API Key，请在「AI 设置」中填写",
+      },
       { status: 503 },
     );
   }
@@ -39,16 +61,22 @@ export async function POST(req: NextRequest) {
       { id: songId, name: songName },
       body?.artists?.trim() ?? "",
       missing,
+      config,
     );
     const translations = [...map.entries()]
       .map(([index, zh]) => ({ index, zh }))
       .sort((a, b) => a.index - b.index);
     return NextResponse.json({ ok: true, translations });
   } catch (e) {
-    console.error("[api/translate]", songId, e);
+    console.error(
+      "[api/translate]",
+      songId,
+      e instanceof Error ? e.name : "unknown",
+    );
+    const failure = describeAiError(e, "AI 翻译失败，请稍后重试");
     return NextResponse.json(
-      { ok: false, error: "AI 翻译失败，请稍后重试" },
-      { status: 502 },
+      { ok: false, code: failure.code, error: failure.error },
+      { status: failure.status },
     );
   }
 }

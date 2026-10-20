@@ -14,6 +14,8 @@ import type {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// 抓词重试 + kuromoji 冷启动加载词典 + 全文同步分词
+export const maxDuration = 60;
 
 /** POST /api/song { song: NeteaseSong } → { ok, data: SongData }
  *  主管线：抓词 → LRC 解析 → 对齐 tlyric → 分词 → 汉字假名对齐 → 罗马音。

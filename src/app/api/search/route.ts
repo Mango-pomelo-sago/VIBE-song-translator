@@ -3,6 +3,8 @@ import { searchSongs } from "@/lib/netease";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// 网易云请求 8s 超时 + 重试，最坏约 25s
+export const maxDuration = 30;
 
 /** GET /api/search?s=歌名 → { ok, candidates } */
 export async function GET(req: NextRequest) {

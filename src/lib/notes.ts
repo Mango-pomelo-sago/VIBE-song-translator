@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { chat, isConfigured } from "./ai";
+import type { ResolvedAiConfig } from "./ai";
 
 /**
  * AI 文化/语法学习笔记：
@@ -44,8 +45,17 @@ const MAX_LINES = 25; // 喂给 AI 的歌词行数上限
 type CacheEntry = { value: LearningNotes; expiresAt: number };
 const CACHE = new Map<string, CacheEntry>();
 
-export function hasNotesCache(songId: number): boolean {
-  const e = CACHE.get(`notes:${songId}`);
+/** 缓存指纹：只含供应商与模型（绝不含 key）；未传 config 时保持旧键。 */
+function cacheKey(songId: number, config?: ResolvedAiConfig): string {
+  const base = `notes:${songId}`;
+  return config ? `${base}:${config.baseUrl}|${config.model}` : base;
+}
+
+export function hasNotesCache(
+  songId: number,
+  config?: ResolvedAiConfig,
+): boolean {
+  const e = CACHE.get(cacheKey(songId, config));
   return !!e && e.expiresAt > Date.now();
 }
 
@@ -99,8 +109,9 @@ export async function generateNotes(
   song: { id: number; name: string },
   artist: string,
   lines: Array<{ text: string }>,
+  config?: ResolvedAiConfig,
 ): Promise<LearningNotes> {
-  const key = `notes:${song.id}`;
+  const key = cacheKey(song.id, config);
   const cached = cacheGet(key);
   if (cached) return cached;
 
@@ -116,7 +127,12 @@ export async function generateNotes(
     { role: "user" as const, content: buildUserPrompt(song.name, artist, lyricText) },
   ];
 
-  let raw = await chat(messages, { temperature: 0.4, json: true, maxTokens: 2500 });
+  let raw = await chat(messages, {
+    temperature: 0.4,
+    json: true,
+    maxTokens: 2500,
+    config,
+  });
   let notes: LearningNotes | null = null;
   try {
     notes = parseNotes(raw);
@@ -135,7 +151,7 @@ export async function generateNotes(
             "你上次的输出不是合法 JSON。请重新只输出符合要求的 JSON，不要任何额外文字。",
         },
       ],
-      { temperature: 0.2, json: true, maxTokens: 2500 },
+      { temperature: 0.2, json: true, maxTokens: 2500, config },
     );
     notes = parseNotes(raw);
   }

@@ -10,14 +10,22 @@
 
 ---
 
-## 环境变量
+## AI 配置
 
-复制 `.env.example` 为 `.env.local` 并填写：
+页面里点「AI 设置」即可填写自己的 API Key、Base URL 和模型（任意 OpenAI 兼容接口均可，如 DeepSeek、OpenAI、硅基流动、本地 Ollama）。
+
+- 配置只保存在**本机浏览器 localStorage**（键名 `vibe-ai:v1`），每次请求通过请求头发给本站 API 路由；服务端不保存、不写日志。
+- 优先级：**浏览器配置 > 服务端环境变量**。服务端没配环境变量、浏览器也没填时，相关功能优雅降级为 503 提示，并引导到「AI 设置」。
+- 如果部署成公开服务，用户各自填自己的 Key；用户提供的 Base URL 会由服务端发起请求（支持本地模型），公开部署时请自行评估是否需要限制内网地址。
+
+## 环境变量（可选兜底）
+
+也可以复制 `.env.example` 为 `.env.local` 并在服务端统一配置：
 
 | 变量 | 说明 |
 |---|---|
-| `DEEPSEEK_API_KEY` | **必填**。DeepSeek API key（翻译兜底 + AI 笔记用；未配置时相关功能优雅降级为 503 提示） |
-| `DEEPSEEK_MODEL` | 可选，默认 `deepseek-chat`（模型名升级只改这里） |
+| `DEEPSEEK_API_KEY` | 可选。服务端兜底 Key（翻译缺失行 + AI 笔记用） |
+| `DEEPSEEK_MODEL` | 可选，默认 `deepseek-chat` |
 | `DEEPSEEK_BASE_URL` | 可选，默认 `https://api.deepseek.com/v1` |
 
 ## 开发

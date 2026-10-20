@@ -3,6 +3,7 @@
 import { FURIGANA_LABELS } from "@/lib/prefs";
 import type { FuriganaMode } from "@/lib/prefs";
 import { useDisplayPrefs } from "./DisplayPrefs";
+import { AiSettingsButton } from "./AiSettings";
 import SdfLensBlur from "./SdfLensBlur";
 
 const MODES: FuriganaMode[] = ["romaji", "kana", "hidden"];
@@ -81,6 +82,10 @@ export default function DisplaySettings() {
         checked={prefs.showTranslation}
         onChange={(v) => set({ showTranslation: v })}
       />
+
+      <div className="ml-auto">
+        <AiSettingsButton />
+      </div>
     </div>
     </div>
   );
