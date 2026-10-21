@@ -413,11 +413,18 @@ body {
 }
 
 /* ── Gooey 搜索：原版 Codrops 粘性两态交互 ──────── */
+/* 宽度跟随胶囊本身：若设为 100%，在 header 的 flex 行里会独占一行，把「使用说明」挤到下一行 */
 .gooey-search {
-  width: 100%;
+  width: max-content;
+  max-width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* 展开时圆形搜索图标会向右浮出约 16px，给 header 右侧预留这段空间，避免贴边被裁 */
+.gooey-search.gooey-open {
+  margin-right: 1rem;
 }
 
 .gooey-search.no-goo .gooey-inner {

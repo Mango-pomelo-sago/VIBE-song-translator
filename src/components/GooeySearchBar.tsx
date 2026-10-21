@@ -17,7 +17,8 @@ type Props = {
 const buttonVariants = {
   initial: { x: 0, width: 100 },
   step1: { x: 0, width: 100 },
-  step2: { x: -30, width: 180 },
+  // 不再像原版那样左移 30px：搜索框现在与语言切换并排，左移会盖住语言切换
+  step2: { x: 0, width: 180 },
 };
 
 const iconVariants = {
@@ -51,7 +52,11 @@ export default function GooeySearchBar({
   }
 
   return (
-    <div className={isUnsupported ? "gooey-search no-goo" : "gooey-search"}>
+    <div
+      className={`${isUnsupported ? "gooey-search no-goo" : "gooey-search"}${
+        step === 2 ? " gooey-open" : ""
+      }`}
+    >
       <GooeyFilter />
 
       <div className="gooey-stage">

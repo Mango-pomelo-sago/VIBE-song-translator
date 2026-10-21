@@ -23,9 +23,9 @@ const GROUPS: {
   shape: "circle" | "square" | "diamond";
   hint: string;
 }[] = [
-  { level: "beginner", shape: "circle", hint: "常用词多，适合入门" },
-  { level: "intermediate", shape: "square", hint: "词汇更丰富，稳步进阶" },
-  { level: "advanced", shape: "diamond", hint: "难点词多，挑战一下" },
+  { level: "beginner", shape: "circle", hint: "常用词多" },
+  { level: "intermediate", shape: "square", hint: "词汇更丰富" },
+  { level: "advanced", shape: "diamond", hint: "难点词多" },
 ];
 
 /** 按难度档位返回几何图标（构成主义/包豪斯风格，替代 emoji） */
@@ -69,15 +69,16 @@ export default function RecommendationPanel({
   }, [isFr]);
 
   return (
-    <section className="glass-card relative" aria-label="歌曲难度推荐">
+    <section className="glass-card relative overflow-hidden" aria-label="歌曲难度推荐">
       <SdfLensBlur />
       <div className="relative z-10">
-        <header className="flex items-center justify-between border-b border-glass-border px-4 py-3">
-          <h2 className="font-sc flex items-center gap-2 text-base font-bold text-ink">
-            <Target size={18} className="text-bauhaus-blue" />
+        <header className="flex flex-col gap-1 border-b border-glass-border px-4 py-3">
+          <h2 className="font-sc flex items-center gap-2 whitespace-nowrap text-base font-bold text-ink">
+            <Target size={18} className="shrink-0 text-bauhaus-blue" />
             按难度挑歌
           </h2>
-          <span className="hidden shrink-0 font-romaji text-xs text-ink/50 sm:inline">
+          {/* 侧栏只有约 280px 宽，说明文字必须另起一行，否则会把标题挤成竖排 */}
+          <span className="font-romaji text-[11px] leading-snug text-ink/50">
             {isFr
               ? "难度由内容词 CEFR 等级与 B1+ 词汇占比估算"
               : "难度由歌词内容词平均 JLPT 等级估算"}
