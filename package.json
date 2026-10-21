@@ -7,7 +7,9 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build:fr-lexicon": "node scripts/build-fr-lexicon.mjs",
+    "build:songs-fr": "node scripts/build-songs-fr.mjs"
   },
   "dependencies": {
     "framer-motion": "^13.1.0",

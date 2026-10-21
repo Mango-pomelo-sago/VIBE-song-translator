@@ -41,6 +41,9 @@
   --font-lyric: var(--font-noto-serif-jp);
   --font-sc: var(--font-noto-sans-sc);
   --font-romaji: var(--font-geist-mono);
+  /* 法语歌词与 IPA 用系统字体栈：不新增 Google 字体，避免构建期下载失败 */
+  --font-lyric-fr: "Noto Sans", "Segoe UI", "DejaVu Sans", system-ui, sans-serif;
+  --font-ipa: "Charis SIL", "Doulos SIL", "Noto Sans", "Segoe UI", "DejaVu Sans", system-ui, sans-serif;
   --font-sans: var(--font-noto-sans-sc);
   --font-mono: var(--font-geist-mono);
 
@@ -300,6 +303,30 @@ body {
   color: var(--color-bauhaus-blue);
   letter-spacing: 0.03em;
   text-transform: none;
+}
+
+/* 法语 IPA：用覆盖面更广的字体栈，字号略大以避免音标过小 */
+.ruby-ipa rt {
+  font-family: var(--font-ipa);
+  font-size: 0.52em;
+  letter-spacing: 0;
+}
+
+/* 省音：l' / j' 等虚词用虚线下划线提示 */
+.elision-mark {
+  text-decoration: underline dotted;
+  text-decoration-color: rgba(2, 132, 199, 0.55);
+  text-underline-offset: 3px;
+}
+
+/* 联诵标记：les‿z amis 中的连接符与音素 */
+.liaison-mark {
+  font-family: var(--font-ipa);
+  font-size: 0.72em;
+  font-weight: 600;
+  color: var(--color-bauhaus-blue);
+  letter-spacing: -0.01em;
+  user-select: none;
 }
 
 /* ── 选中 ──────────────────────────────────── */

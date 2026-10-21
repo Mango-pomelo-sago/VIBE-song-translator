@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { chat, isConfigured } from "./ai";
 import type { ResolvedAiConfig } from "./ai";
+import type { LangCode } from "./types";
 
 /**
  * AI 文化/语法学习笔记：
@@ -45,17 +46,22 @@ const MAX_LINES = 25; // 喂给 AI 的歌词行数上限
 type CacheEntry = { value: LearningNotes; expiresAt: number };
 const CACHE = new Map<string, CacheEntry>();
 
-/** 缓存指纹：只含供应商与模型（绝不含 key）；未传 config 时保持旧键。 */
-function cacheKey(songId: number, config?: ResolvedAiConfig): string {
-  const base = `notes:${songId}`;
+/** 缓存指纹：语言 + 供应商与模型（绝不含 key）；未传 config 时保持旧格式。 */
+function cacheKey(
+  songId: number,
+  config?: ResolvedAiConfig,
+  lang: LangCode = "ja",
+): string {
+  const base = `notes:${lang}:${songId}`;
   return config ? `${base}:${config.baseUrl}|${config.model}` : base;
 }
 
 export function hasNotesCache(
   songId: number,
   config?: ResolvedAiConfig,
+  lang: LangCode = "ja",
 ): boolean {
-  const e = CACHE.get(cacheKey(songId, config));
+  const e = CACHE.get(cacheKey(songId, config, lang));
   return !!e && e.expiresAt > Date.now();
 }
 
@@ -83,14 +89,24 @@ export function parseNotes(raw: string): LearningNotes {
   return LearningNotesSchema.parse(json);
 }
 
-const SYSTEM_PROMPT =
-  "你是资深日语老师兼日本文化向导。根据用户提供的日文歌词生成中文学习笔记，" +
-  "必须严格按 JSON 结构输出，cultural 与 grammar 的例句必须真实来自歌词，不得编造。" +
+const JSON_SHAPE =
   "输出 JSON：{" +
   '"background":"歌曲背景/主题/意象总览，2-3 句",' +
   '"cultural":[{"snippet":"文化关键词","title":"小节标题","detail":"2-3 句解释"}],' +
   '"grammar":[{"pattern":"句型","meaning":"意思","rule":"接续规则","example":"歌词例句原文","translation":"例句翻译"}]' +
   "}";
+
+const SYSTEM_PROMPTS: Record<LangCode, string> = {
+  ja:
+    "你是资深日语老师兼日本文化向导。根据用户提供的日文歌词生成中文学习笔记，" +
+    "必须严格按 JSON 结构输出，cultural 与 grammar 的例句必须真实来自歌词，不得编造。" +
+    JSON_SHAPE,
+  fr:
+    "你是资深法语老师兼法国文化向导。根据用户提供的法语歌词生成中文学习笔记，" +
+    "语法札记优先覆盖：名词阴阳性与冠词、动词时态与人称、省音（élision）与联诵（liaison）；" +
+    "cultural 与 grammar 的例句必须真实来自歌词，不得编造。" +
+    JSON_SHAPE,
+};
 
 function buildUserPrompt(
   title: string,
@@ -110,8 +126,9 @@ export async function generateNotes(
   artist: string,
   lines: Array<{ text: string }>,
   config?: ResolvedAiConfig,
+  lang: LangCode = "ja",
 ): Promise<LearningNotes> {
-  const key = cacheKey(song.id, config);
+  const key = cacheKey(song.id, config, lang);
   const cached = cacheGet(key);
   if (cached) return cached;
 
@@ -123,7 +140,7 @@ export async function generateNotes(
   if (!lyricText) throw new Error("notes: 歌词为空");
 
   const messages = [
-    { role: "system" as const, content: SYSTEM_PROMPT },
+    { role: "system" as const, content: SYSTEM_PROMPTS[lang] },
     { role: "user" as const, content: buildUserPrompt(song.name, artist, lyricText) },
   ];
 

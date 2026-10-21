@@ -4,16 +4,42 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObje
 import { createPortal } from "react-dom";
 import { Star, ArrowRight } from "lucide-react";
 import type { DictEntry, MorphToken } from "@/lib/types";
+import { describeVerb } from "@/lib/fr/verbs";
 import { fetchEntry } from "./DictionaryCache";
-import { colorFor, level, normalizeJishoJlpt } from "@/lib/jlpt";
+import { level, normalizeJishoJlpt } from "@/lib/jlpt";
+import { levelBadgeLabel, levelColor } from "@/lib/lang/meta";
 import type { VocabItem } from "@/lib/vocab";
 import { useVocab } from "./VocabStore";
+import { useLang } from "./LangProvider";
 
 const EDGE = 8; // 与视口边缘的最小间距
 const GAP = 6; // 与单词之间的间距
 
+/** 法语词性展示名 */
+const FR_POS: Record<string, string> = {
+  NOUN: "nom",
+  VERB: "verbe",
+  AUX: "auxiliaire",
+  ADJ: "adjectif",
+  ADV: "adverbe",
+  PRON: "pronom",
+  DET: "déterminant",
+  PREP: "préposition",
+  CONJ: "conjonction",
+  INTJ: "interjection",
+  NUM: "numéral",
+  UNK: "未知",
+};
+
+const LIAISON_LABEL = {
+  obligatory: "必须联诵",
+  optional: "可选联诵",
+  forbidden: "不联诵",
+} as const;
+
 /**
- * hover / tap 词卡：读音 + JLPT 徽章 + 词性 + 前 3 条英文释义 + 收藏 + Jisho 链接
+ * hover / tap 词卡：读音 + 等级徽章 + 词性 + 释义 + 收藏 + 词典外链。
+ * 法语额外显示 IPA、阴阳性、变位、词频、联诵/省音。
  *
  * 定位：渲染到 body 的 portal，`position: fixed` + 手动夹取到视口内。
  * 不能留在 token 内——祖先的 backdrop-filter / transform 会成为 fixed 的包含块。
@@ -34,7 +60,9 @@ export default function WordTooltip({
   const [entry, setEntry] = useState<DictEntry | null>(null);
   const [state, setState] = useState<"loading" | "ok" | "miss">("loading");
   const { has, toggle } = useVocab();
-  const saved = has(token.basicForm);
+  const { lang } = useLang();
+  const isFr = lang === "fr";
+  const saved = has(token.basicForm, lang);
   const tipRef = useRef<HTMLDivElement>(null);
   // 用 ref 持有最新回调，避免定位/监听 effect 因函数标识变化反复重绑
   const closeRef = useRef(onClose);
@@ -43,7 +71,7 @@ export default function WordTooltip({
   useEffect(() => {
     let alive = true;
     setState("loading");
-    fetchEntry(token.surface, token.basicForm).then((e) => {
+    fetchEntry(token.surface, token.basicForm, lang).then((e) => {
       if (!alive) return;
       setEntry(e);
       setState(e ? "ok" : "miss");
@@ -51,7 +79,7 @@ export default function WordTooltip({
     return () => {
       alive = false;
     };
-  }, [token.surface, token.basicForm]);
+  }, [token.surface, token.basicForm, lang]);
 
   const place = useCallback(() => {
     const a = anchorRef.current?.getBoundingClientRect();
@@ -131,9 +159,10 @@ export default function WordTooltip({
     const item: VocabItem = {
       surface: token.surface,
       basicForm: token.basicForm,
-      reading: token.reading,
-      romaji: token.romaji,
-      level: lv,
+      reading: isFr ? token.ipa ?? null : token.reading,
+      romaji: isFr ? null : token.romaji,
+      level: isFr ? token.level ?? null : lv,
+      lang,
       addedAt: Date.now(),
     };
     toggle(item);
@@ -141,10 +170,27 @@ export default function WordTooltip({
 
   const jishoLv = normalizeJishoJlpt(entry?.jlpt?.[0]);
   const localLv = level(token.basicForm) ?? level(token.surface);
-  const lv = jishoLv ?? localLv;
-  const lvColor = colorFor(lv);
+  const lv = isFr
+    ? token.level ?? entry?.cefr?.[0] ?? null
+    : jishoLv ?? localLv;
+  const lvColor = levelColor(lang, lv);
   const displayWord = entry?.word ?? token.surface;
-  const reading = entry?.reading ?? token.reading;
+  const reading = (isFr ? token.ipa : null) ?? entry?.reading ?? token.reading;
+  const posLabel = isFr ? FR_POS[token.pos] ?? token.pos : token.pos;
+  const genderLabel =
+    isFr && token.gender
+      ? `${token.gender === "m" ? "le" : "la"} · ${token.gender}.`
+      : null;
+  const verbLabel =
+    isFr && token.verb ? describeVerb(token.verb) : null;
+  const liaison = isFr ? token.liaison : null;
+  const genericPa = (entry?.senses ?? [])
+    .flatMap((s) =>
+      isFr
+        ? (s.definitions ?? []).map((d) => ({ pos: s.partsOfSpeech[0], text: d }))
+        : s.english.map((d) => ({ pos: s.partsOfSpeech[0], text: d })),
+    )
+    .slice(0, 3);
 
   if (typeof document === "undefined") return null;
 
@@ -168,12 +214,16 @@ export default function WordTooltip({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="font-lyric text-base font-bold leading-tight text-ink">
+          <div
+            className={`text-base font-bold leading-tight text-ink ${
+              isFr ? "font-lyric-fr" : "font-lyric"
+            }`}
+          >
             {displayWord}
           </div>
-          <p className="font-romaji mt-0.5 text-xs text-ink/60">
+          <p className="font-ipa mt-0.5 text-xs text-ink/60">
             {reading ? reading : ""}
-            {token.romaji ? ` / ${token.romaji}` : ""}
+            {!isFr && token.romaji ? ` / ${token.romaji}` : ""}
           </p>
         </div>
         <button
@@ -194,28 +244,85 @@ export default function WordTooltip({
           className="rounded-sm border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide"
           style={lvColor ? { color: lvColor, borderColor: lvColor } : { color: "#8a6da6", borderColor: "#8a6da6" }}
         >
-          {lv ? `JLPT ${lv}` : "JLPT 未知"}
+          {levelBadgeLabel(lang, lv)}
         </span>
-        {token.pos && token.pos !== "未知" ? (
+        {posLabel && token.pos !== "PUNCT" ? (
           <span className="rounded-sm border border-glass-border px-1.5 py-0.5 text-[10px] font-bold text-ink/50">
-            {token.pos}
+            {posLabel}
+          </span>
+        ) : null}
+        {genderLabel ? (
+          <span className="rounded-sm border border-glass-border px-1.5 py-0.5 text-[10px] font-bold text-ink/50">
+            {genderLabel}
+          </span>
+        ) : null}
+        {isFr && token.number ? (
+          <span className="rounded-sm border border-glass-border px-1.5 py-0.5 text-[10px] font-bold text-ink/50">
+            {token.number === "pl" ? "pl." : "sg."}
+          </span>
+        ) : null}
+        {verbLabel ? (
+          <span className="rounded-sm border border-glass-border px-1.5 py-0.5 text-[10px] font-bold text-ink/50">
+            {verbLabel}
+          </span>
+        ) : null}
+        {isFr && token.frequency ? (
+          <span className="rounded-sm border border-glass-border px-1.5 py-0.5 text-[10px] font-bold text-ink/50">
+            词频 {Math.round(token.frequency)}/百万
+          </span>
+        ) : null}
+        {token.elision ? (
+          <span className="rounded-sm border border-bauhaus-blue/40 px-1.5 py-0.5 text-[10px] font-bold text-bauhaus-blue">
+            省音 · {token.elision.fullForm}
+          </span>
+        ) : null}
+        {liaison ? (
+          <span
+            className={`rounded-sm border px-1.5 py-0.5 text-[10px] font-bold ${
+              liaison.type === "forbidden"
+                ? "border-ink/20 text-ink/40"
+                : "border-bauhaus-blue/40 text-bauhaus-blue"
+            }`}
+          >
+            {LIAISON_LABEL[liaison.type]}
+            {liaison.phoneme ? ` /${liaison.phoneme}/` : ""}
           </span>
         ) : null}
       </div>
+
+      {token.gloss ? (
+        <div className="mt-2 space-y-0.5">
+          <p className="flex items-start gap-1.5 text-xs leading-snug text-ink">
+            <span className="mt-px shrink-0 rounded-sm border border-bauhaus-blue/40 px-1 py-px text-[9px] font-bold text-bauhaus-blue">
+              AI
+            </span>
+            <span>{token.gloss}</span>
+          </p>
+          {token.glossNote ? (
+            <p className="pl-7 text-[11px] leading-snug text-ink/55">{token.glossNote}</p>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="mt-2">
         {state === "loading" ? (
           <p className="animate-pulse text-xs text-ink/50">查询中…</p>
         ) : state === "miss" || !entry ? (
-          <p className="text-xs text-ink/50">暂无释义（Jisho 未收录）</p>
+          <p className="text-xs text-ink/50">
+            {isFr ? "暂无中文释义（Wiktionary 未收录）" : "暂无释义（Jisho 未收录）"}
+          </p>
+        ) : genericPa.length === 0 ? (
+          <p className="text-xs text-ink/50">
+            {isFr ? "本地词表已收录，暂无释义" : "暂无释义"}
+          </p>
         ) : (
           <ul className="space-y-1.5">
-            {entry.senses.slice(0, 3).map((s, i) => (
+            {genericPa.map((s, i) => (
               <li key={i} className="text-xs leading-snug text-ink/85">
-                {s.partsOfSpeech.length ? (
-                  <span className="font-bold text-ink/50">{s.partsOfSpeech[0]} · </span>
+                {s.pos ? (
+                  <span className="font-bold text-ink/50">{s.pos} · </span>
                 ) : null}
-                {s.english.slice(0, 3).join("；")}
+                {s.text}
               </li>
             ))}
           </ul>
@@ -223,12 +330,17 @@ export default function WordTooltip({
       </div>
 
       <a
-        href={entry?.url ?? `https://jisho.org/search/${encodeURIComponent(token.surface)}`}
+        href={
+          entry?.url ??
+          (isFr
+            ? `https://fr.wiktionary.org/wiki/${encodeURIComponent(token.surface)}`
+            : `https://jisho.org/search/${encodeURIComponent(token.surface)}`)
+        }
         target="_blank"
         rel="noreferrer"
         className="mt-2 inline-flex items-center gap-0.5 text-xs font-semibold text-ink/60 underline decoration-bauhaus-blue/50 underline-offset-2 hover:text-bauhaus-blue"
       >
-        在 Jisho 查看
+        {isFr ? "在 Wiktionary 查看" : "在 Jisho 查看"}
         <ArrowRight size={12} />
       </a>
     </div>,

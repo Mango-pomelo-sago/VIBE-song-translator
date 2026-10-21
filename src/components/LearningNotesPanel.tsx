@@ -4,25 +4,28 @@ import { useState } from "react";
 import { GraduationCap, ChevronDown } from "lucide-react";
 import { aiConfigHeaders, loadAiConfig } from "@/lib/ai-config";
 import type { LearningNotes } from "@/lib/notes";
-import type { NeteaseSong, ProcessedLine } from "@/lib/types";
+import type { LangCode, NeteaseSong, ProcessedLine } from "@/lib/types";
 import { useAiSettings } from "./AiSettings";
 import SdfLensBlur from "./SdfLensBlur";
 
-// 客户端内存缓存：同一首歌折叠再展开不重新请求
-const clientCache = new Map<number, LearningNotes>();
+// 客户端内存缓存：同一语言 + 歌曲折叠再展开不重新请求
+const clientCache = new Map<string, LearningNotes>();
+const cacheKey = (lang: LangCode, id: number) => `${lang}:${id}`;
 
 /** AI 学习笔记面板：歌曲背景 + 文化札记 + 语法札记（懒加载，展开时才调 /api/notes） */
 export default function LearningNotesPanel({
   song,
   lines,
+  lang = "ja",
 }: {
   song: NeteaseSong;
   lines: ProcessedLine[];
+  lang?: LangCode;
 }) {
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
   const [notes, setNotes] = useState<LearningNotes | null>(
-    () => clientCache.get(song.id) ?? null,
+    () => clientCache.get(cacheKey(lang, song.id)) ?? null,
   );
   const [error, setError] = useState("");
   const [errorCode, setErrorCode] = useState<string | null>(null);
@@ -44,6 +47,7 @@ export default function LearningNotesPanel({
           title: song.name,
           artist: song.artists?.map((a) => a.name).join(" / ") ?? "",
           lines,
+          lang,
         }),
       });
       const data = (await res.json()) as {
@@ -56,7 +60,7 @@ export default function LearningNotesPanel({
         setErrorCode(data.code ?? null);
         throw new Error(data.error ?? "笔记生成失败");
       }
-      clientCache.set(song.id, data.notes);
+      clientCache.set(cacheKey(lang, song.id), data.notes);
       setNotes(data.notes);
       setStatus("ok");
     } catch (e) {
@@ -183,7 +187,11 @@ export default function LearningNotesPanel({
                           <p className="font-sc mt-1 text-xs leading-relaxed text-ink/60">
                             {g.rule}
                           </p>
-                          <p className="font-lyric mt-1.5 text-sm leading-relaxed text-ink/90">
+                          <p
+                            className={`mt-1.5 text-sm leading-relaxed text-ink/90 ${
+                              lang === "fr" ? "font-lyric-fr" : "font-lyric"
+                            }`}
+                          >
                             {g.example}
                           </p>
                           <p className="font-sc mt-0.5 text-xs leading-relaxed text-ink/55">

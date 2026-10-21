@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { aiConfigHeaders, loadAiConfig } from "@/lib/ai-config";
-import type { NeteaseSong, ProcessedLine } from "@/lib/types";
+import type { LangCode, NeteaseSong, ProcessedLine } from "@/lib/types";
 
 /**
  * 中文翻译：优先网易云 tlyric；缺失行自动调 /api/translate 批量补齐（带 AI 标签）。
@@ -26,6 +26,7 @@ export type TranslationState = {
 export function useLineTranslations(
   song: NeteaseSong,
   lines: ProcessedLine[],
+  lang: LangCode = "ja",
 ): TranslationState {
   const [extra, setExtra] = useState<Record<number, string>>({});
   const [aiIndexes, setAiIndexes] = useState<Set<number>>(() => new Set());
@@ -45,6 +46,7 @@ export function useLineTranslations(
       songId: song.id,
       songName: song.name,
       artists: song.artists?.map((a) => a.name).join(" / ") ?? "",
+      lang,
       missing: missing.map((l) => ({ index: l.index, text: l.text })),
     };
     try {
@@ -82,7 +84,7 @@ export function useLineTranslations(
       setErrorMsg("AI 翻译失败，请稍后重试");
       setStatus("error");
     }
-  }, [song.id, song.name, song.artists, missing]);
+  }, [song.id, song.name, song.artists, missing, lang]);
 
   // 只跑一次（对缺失行快照）
   useEffect(() => {

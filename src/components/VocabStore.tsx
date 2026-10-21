@@ -9,12 +9,13 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
-import { clearVocab, loadVocab, toggleVocab } from "@/lib/vocab";
+import { clearVocab, loadVocab, toggleVocab, vocabKey } from "@/lib/vocab";
 import type { VocabItem } from "@/lib/vocab";
+import type { LangCode } from "@/lib/types";
 
 type VocabCtx = {
   items: VocabItem[];
-  has: (basicForm: string) => boolean;
+  has: (basicForm: string, lang?: LangCode) => boolean;
   toggle: (item: VocabItem) => boolean; // 返回是否已收藏
   clear: () => void;
 };
@@ -32,7 +33,7 @@ export function VocabProvider({ children }: { children: ReactNode }) {
   const toggle = useCallback((item: VocabItem): boolean => {
     const next = toggleVocab(item);
     setItems(next);
-    return next.some((i) => i.basicForm === item.basicForm);
+    return next.some((i) => vocabKey(i) === vocabKey(item));
   }, []);
 
   const clear = useCallback(() => {
@@ -43,7 +44,8 @@ export function VocabProvider({ children }: { children: ReactNode }) {
   const value = useMemo<VocabCtx>(
     () => ({
       items,
-      has: (bf) => items.some((i) => i.basicForm === bf),
+      has: (bf, lang = "ja") =>
+        items.some((i) => vocabKey(i) === vocabKey({ basicForm: bf, lang })),
       toggle,
       clear,
     }),

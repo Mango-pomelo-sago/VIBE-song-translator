@@ -11,17 +11,21 @@ import RecommendationPanel from "./RecommendationPanel";
 import PlaylistPanel from "./PlaylistPanel";
 import LoadingState from "./LoadingState";
 import ErrorState from "./ErrorState";
-import type { NeteaseSong, SongData } from "@/lib/types";
+import { LANG_META } from "@/lib/lang/meta";
+import type { LangCode, NeteaseSong, SongData } from "@/lib/types";
 
 type Status = "idle" | "searching" | "results" | "loading" | "song" | "error";
 
 type Props = {
   /** 父组件传入的搜索词，变化时自动触发搜索 */
   searchQuery?: string;
+  /** 学习语言；由页面传入并随语言切换重挂载 */
+  lang: LangCode;
 };
 
 /** 搜索 → 选曲 → 歌词双栏 的完整前端流程 */
-export default function SearchFlow({ searchQuery }: Props) {
+export default function SearchFlow({ searchQuery, lang }: Props) {
+  const meta = LANG_META[lang];
   const [status, setStatus] = useState<Status>("idle");
   const [candidates, setCandidates] = useState<NeteaseSong[]>([]);
   const [song, setSong] = useState<NeteaseSong | null>(null);
@@ -73,7 +77,7 @@ export default function SearchFlow({ searchQuery }: Props) {
       const res = await fetch("/api/song", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ song: c }),
+        body: JSON.stringify({ song: c, lang }),
       });
       // 服务端异常时可能返回纯文本（如模块加载失败），手动解析避免 JSON.parse 崩溃
       const text = await res.text();
@@ -98,10 +102,10 @@ export default function SearchFlow({ searchQuery }: Props) {
         return (
           <div className="animate-fade-up text-center">
             <h2 className="font-sc text-2xl font-bold text-ink sm:text-3xl">
-              输入日文歌名，跟着音乐学日语
+              {meta.idleHeading}
             </h2>
             <p className="font-sc mt-3 text-sm leading-relaxed text-ink/70">
-              罗马音标注 · 文节断句 · hover 查词 · 中文翻译对照
+              {meta.idleSubline}
             </p>
           </div>
         );
@@ -136,7 +140,7 @@ export default function SearchFlow({ searchQuery }: Props) {
               <VocabDrawer />
             </div>
             <LyricView data={data} />
-            <LearningNotesPanel song={song} lines={data.lines} />
+            <LearningNotesPanel song={song} lines={data.lines} lang={lang} />
           </div>
         ) : null;
       case "error":
@@ -155,8 +159,12 @@ export default function SearchFlow({ searchQuery }: Props) {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
         {/* 左栏：我的歌单 + 按难度挑歌 */}
         <aside className="flex flex-col gap-4">
-          <PlaylistPanel onSelect={handleSelect} disabled={busy} />
-          <RecommendationPanel onSelect={handleSelect} disabled={busy} />
+          <PlaylistPanel onSelect={handleSelect} disabled={busy} lang={lang} />
+          <RecommendationPanel
+            onSelect={handleSelect}
+            disabled={busy}
+            lang={lang}
+          />
         </aside>
 
         {/* 右栏：动态内容 */}

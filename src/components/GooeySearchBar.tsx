@@ -10,6 +10,7 @@ import { isUnsupportedBrowser } from "@/lib/isUnsupportedBrowser";
 type Props = {
   onSearch?: (query: string) => void;
   disabled?: boolean;
+  placeholder?: string;
 };
 
 /** ── 原版 Codrops 两态动画（复刻 App.jsx） ── */
@@ -25,7 +26,11 @@ const iconVariants = {
 };
 
 /** 忠实复刻 Codrops 粘性搜索：折叠胶囊 → 弹性展开成输入框 + 独立圆形图标，液态融合 */
-export default function GooeySearchBar({ onSearch, disabled = false }: Props) {
+export default function GooeySearchBar({
+  onSearch,
+  disabled = false,
+  placeholder = "输入日文歌名…",
+}: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<1 | 2>(1);
   const [query, setQuery] = useState("");
@@ -74,7 +79,7 @@ export default function GooeySearchBar({ onSearch, disabled = false }: Props) {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   className="gs-input"
-                  placeholder="输入日文歌名…"
+                  placeholder={placeholder}
                   aria-label="歌名搜索"
                 />
               </form>

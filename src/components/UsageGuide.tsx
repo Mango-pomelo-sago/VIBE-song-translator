@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Search, Disc3, BookOpen, X } from "lucide-react";
+import { useLang } from "./LangProvider";
 
-const STEPS = [
+const STEPS_JA = [
   {
     n: "01",
     icon: Search,
@@ -25,9 +26,32 @@ const STEPS = [
   },
 ];
 
+const STEPS_FR = [
+  {
+    n: "01",
+    icon: Search,
+    title: "搜歌",
+    desc: "输入法语歌名，自动抓取原版歌词与中文翻译。",
+  },
+  {
+    n: "02",
+    icon: Disc3,
+    title: "读词",
+    desc: "单词上方标注 IPA，联诵与省音直接画在歌词里。",
+  },
+  {
+    n: "03",
+    icon: BookOpen,
+    title: "查词",
+    desc: "hover 查看阴阳性、变位与 CEFR 等级，一键收藏生词。",
+  },
+];
+
 /** 使用说明弹窗：三步卡片（搜歌/读词/查词） */
 export default function UsageGuide() {
   const [open, setOpen] = useState(false);
+  const { lang } = useLang();
+  const STEPS = lang === "fr" ? STEPS_FR : STEPS_JA;
 
   return (
     <>

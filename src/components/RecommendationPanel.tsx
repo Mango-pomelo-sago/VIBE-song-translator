@@ -3,15 +3,19 @@
 import { useMemo, useState } from "react";
 import { Target, ChevronDown, ChevronRight } from "lucide-react";
 import { SEED_SONGS } from "@/data/songs";
-import type { DifficultyLevel } from "@/lib/difficulty";
-import type { NeteaseSong } from "@/lib/types";
+import { SEED_SONGS_FR } from "@/data/songs-fr";
+import type { DifficultyLevel, DifficultyScore } from "@/lib/difficulty";
+import type { LangCode, NeteaseSong } from "@/lib/types";
 import DifficultyBadge, { DIFFICULTY_COLORS } from "./DifficultyBadge";
 import SdfLensBlur from "./SdfLensBlur";
 
 type Props = {
   onSelect: (song: NeteaseSong) => void;
   disabled?: boolean;
+  lang?: LangCode;
 };
+
+type SeedLike = NeteaseSong & { difficulty: DifficultyScore | null };
 
 const GROUPS: {
   level: DifficultyLevel;
@@ -40,20 +44,29 @@ function ShapeIcon({ shape, color }: { shape: "circle" | "square" | "diamond"; c
  * 歌曲难度推荐：内置热门 J-pop 种子曲目，按难度分档（入门/进阶/挑战）展示。
  * 点击任一行即加载该曲（复用搜索流程的 handleSelect）。
  */
-export default function RecommendationPanel({ onSelect, disabled }: Props) {
+export default function RecommendationPanel({
+  onSelect,
+  disabled,
+  lang = "ja",
+}: Props) {
   // 折叠态：默认只展开入门档，避免首页信息过载
   const [openLevels, setOpenLevels] = useState<Record<string, boolean>>({
     beginner: true,
   });
+  const isFr = lang === "fr";
 
   const grouped = useMemo(() => {
-    const sorted = [...SEED_SONGS].sort((a, b) => a.difficulty.score - b.difficulty.score);
-    const g: Record<string, typeof sorted> = {};
+    const seeds: SeedLike[] = isFr ? SEED_SONGS_FR : SEED_SONGS;
+    const sorted = [...seeds].sort(
+      (a, b) => (a.difficulty?.score ?? 999) - (b.difficulty?.score ?? 999),
+    );
+    const g: Record<string, SeedLike[]> = {};
     for (const s of sorted) {
-      (g[s.difficulty.level] ??= []).push(s);
+      const key = s.difficulty?.level ?? "intermediate";
+      (g[key] ??= []).push(s);
     }
     return g;
-  }, []);
+  }, [isFr]);
 
   return (
     <section className="glass-card relative" aria-label="歌曲难度推荐">
@@ -64,7 +77,11 @@ export default function RecommendationPanel({ onSelect, disabled }: Props) {
             <Target size={18} className="text-bauhaus-blue" />
             按难度挑歌
           </h2>
-          <span className="hidden shrink-0 font-romaji text-xs text-ink/50 sm:inline">难度由歌词内容词平均 JLPT 等级估算</span>
+          <span className="hidden shrink-0 font-romaji text-xs text-ink/50 sm:inline">
+            {isFr
+              ? "难度由内容词平均 CEFR 等级估算"
+              : "难度由歌词内容词平均 JLPT 等级估算"}
+          </span>
         </header>
 
         <div className="flex flex-col gap-0">
@@ -98,7 +115,9 @@ export default function RecommendationPanel({ onSelect, disabled }: Props) {
                 {open ? (
                   <div className="border-t border-glass-border">
                     {songs.length === 0 ? (
-                      <p className="font-sc px-4 py-3 text-sm text-ink/50">暂无收录此档曲目</p>
+                      <p className="font-sc px-4 py-3 text-sm text-ink/50">
+                        {isFr ? "暂无收录此档法语曲目" : "暂无收录此档曲目"}
+                      </p>
                     ) : (
                       songs.map((s) => (
                         <button
@@ -117,7 +136,9 @@ export default function RecommendationPanel({ onSelect, disabled }: Props) {
                             </span>
                           </span>
                           <span className="font-romaji text-[11px] text-ink/50">
-                            {Math.round(s.difficulty.score / 10)}/10
+                            {s.difficulty
+                              ? `${Math.round(s.difficulty.score / 10)}/10`
+                              : "未评分"}
                           </span>
                           <DifficultyBadge difficulty={s.difficulty} compact />
                         </button>

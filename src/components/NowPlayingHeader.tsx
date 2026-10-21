@@ -4,6 +4,7 @@ import type { NeteaseSong } from "@/lib/types";
 import type { DifficultyScore } from "@/lib/difficulty";
 import { toSavedSong } from "@/lib/playlist";
 import { usePlaylist } from "./PlaylistStore";
+import { useLang } from "./LangProvider";
 import RoseCurve from "./RoseCurve";
 import DifficultyBadge from "./DifficultyBadge";
 
@@ -21,7 +22,8 @@ export default function NowPlayingHeader({
   difficulty?: DifficultyScore | null;
 }) {
   const { has, toggle } = usePlaylist();
-  const saved = toSavedSong(song, difficulty);
+  const { lang } = useLang();
+  const saved = toSavedSong(song, difficulty, lang);
   const favorited = has(song.id);
 
   return (

@@ -1,7 +1,10 @@
 "use client";
 
-import type { SongData } from "@/lib/types";
+import { Fragment, useEffect, useState } from "react";
+import type { MorphToken, SongData } from "@/lib/types";
 import { isContentWord } from "@/lib/parts";
+import { annotationModeFor } from "@/lib/lang/meta";
+import { aiConfigHeaders, isAiConfigComplete, loadAiConfig } from "@/lib/ai-config";
 import { useDisplayPrefs } from "./DisplayPrefs";
 import { useAiSettings } from "./AiSettings";
 import RubyText from "./RubyText";
@@ -13,17 +16,77 @@ import {
   LineTranslation,
 } from "./TranslationColumn";
 
-/** 歌词视图：每行内嵌 grid 双栏，日文歌词与中文翻译天然对齐 */
+/** 法语联诵可写进排版（必须/可选），禁止联诵不显示 */
+function liaisonOf(t: MorphToken | undefined): string | null {
+  if (!t?.liaison || t.liaison.type === "forbidden") return null;
+  return t.liaison.phoneme;
+}
+
+type AiGloss = { gloss: string; note: string | null };
+
+/** 歌词视图：每行内嵌 grid 双栏，歌词与中文翻译天然对齐 */
 export default function LyricView({ data }: { data: SongData }) {
   const { prefs } = useDisplayPrefs();
   const { open: openAiSettings } = useAiSettings();
   const showBunsetsu = prefs.showBunsetsu;
-  const transState = useLineTranslations(data.song, data.lines);
+  const lang = data.lang ?? "ja";
+  const isFr = lang === "fr";
+  const mode = annotationModeFor(lang, prefs.furigana);
+  const showLiaison = isFr && mode !== "hidden";
+  const transState = useLineTranslations(data.song, data.lines, lang);
   const needsAiConfig =
     transState.errorCode === "ai_not_configured" ||
     transState.errorCode === "ai_auth_failed";
 
-  // 移动端单列（译文紧随日文行下方）；md 起双列，xl 再放宽译文列。
+  // 法语：本地标注渲染后异步补中文释义；未配置 key 则完全不请求
+  const [aiGloss, setAiGloss] = useState<Record<string, AiGloss>>({});
+  useEffect(() => {
+    setAiGloss({});
+    if (!isFr) return;
+    const config = loadAiConfig();
+    if (!isAiConfigComplete(config)) return;
+    const lines = data.lines
+      .filter((l) => l.text.trim())
+      .map((l) => ({ index: l.index, text: l.text }));
+    if (lines.length === 0) return;
+
+    const ctrl = new AbortController();
+    let alive = true;
+    fetch("/api/annotate", {
+      method: "POST",
+      signal: ctrl.signal,
+      headers: { "Content-Type": "application/json", ...aiConfigHeaders(config) },
+      body: JSON.stringify({ songId: data.song.id, lang, lines }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json: unknown) => {
+        if (!alive) return;
+        const payload = json as { ok?: boolean; lemmas?: unknown } | null;
+        if (!payload?.ok || !Array.isArray(payload.lemmas)) return;
+        const map: Record<string, AiGloss> = {};
+        for (const raw of payload.lemmas as Array<{
+          lemma?: unknown;
+          glossZh?: unknown;
+          note?: unknown;
+        }>) {
+          if (typeof raw.lemma !== "string" || typeof raw.glossZh !== "string") continue;
+          map[raw.lemma.toLowerCase()] = {
+            gloss: raw.glossZh,
+            note: typeof raw.note === "string" && raw.note.trim() ? raw.note : null,
+          };
+        }
+        setAiGloss(map);
+      })
+      .catch(() => {
+        // 增强失败不影响本地标注；下次进入歌曲再试
+      });
+    return () => {
+      alive = false;
+      ctrl.abort();
+    };
+  }, [data.song.id, data.lines, isFr, lang]);
+
+  // 移动端单列（译文紧随歌词行下方）；md 起双列，xl 再放宽译文列。
   // minmax(0,1fr) 而非 1fr：压掉 grid 子项的自动最小尺寸，避免被长歌词撑开。
   const rowClass =
     "mb-3 grid grid-cols-1 gap-y-1 md:gap-6 " +
@@ -36,23 +99,47 @@ export default function LyricView({ data }: { data: SongData }) {
       <SdfLensBlur />
       <div className="relative z-10">
         {data.lines.map((l) => (
-          <div
-            key={l.index}
-            className={rowClass}
-          >
-            {/* 日文歌词 */}
+          <div key={l.index} className={rowClass}>
+            {/* 歌词 */}
             <div className="min-w-0">
-              <div className="lyric-wrap font-lyric text-base leading-relaxed text-ink sm:text-lg">
+              <div
+                className={`lyric-wrap text-base leading-relaxed text-ink sm:text-lg ${
+                  isFr ? "font-lyric-fr" : "font-lyric"
+                }`}
+              >
                 {l.tokens && l.tokens.length ? (
-                  l.tokens.map((t, i) =>
-                    isContentWord(t.pos) ? (
-                      <TokenWord key={i} token={t} />
-                    ) : (
-                      <span key={i}>
-                        <RubyText segments={t.ruby} />
-                      </span>
-                    ),
-                  )
+                  l.tokens.map((t, i) => {
+                    const prev = l.tokens![i - 1];
+                    const join = showLiaison ? liaisonOf(prev) : null;
+                    const isContent = t.content ?? isContentWord(t.pos);
+                    // AI 只补 gloss / note，本地 IPA、CEFR、阴阳性、变位保持原值
+                    const ai = aiGloss[t.basicForm.toLowerCase()];
+                    const token: MorphToken =
+                      ai && !t.gloss
+                        ? {
+                            ...t,
+                            gloss: ai.gloss,
+                            glossNote: t.glossNote ?? ai.note,
+                          }
+                        : t;
+                    return (
+                      <Fragment key={i}>
+                        {isFr && t.spaceBefore && i > 0 && !join ? " " : null}
+                        {isContent ? (
+                          <TokenWord token={token} />
+                        ) : (
+                          <span className={isFr && t.elision ? "elision-mark" : undefined}>
+                            <RubyText segments={t.ruby} />
+                          </span>
+                        )}
+                        {join ? (
+                          <span className="liaison-mark" aria-hidden>
+                            ‿{join}
+                          </span>
+                        ) : null}
+                      </Fragment>
+                    );
+                  })
                 ) : (
                   <span>{l.text}</span>
                 )}

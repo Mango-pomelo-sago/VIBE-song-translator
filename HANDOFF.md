@@ -1,9 +1,9 @@
-# 📋 项目交接总结：VIBE RECORDS（日语歌曲学习网站）
+# 📋 项目交接总结：VIBE RECORDS（日语 / 法语歌曲学习网站）
 
 > **项目目录**：`d:\Vibe-song translate`（Next.js 15 App Router，git 仓库，分支 master）
-> **状态**：M1–M10 全部完成 + 一轮 4 项修复已完成 + **二轮 2 项 Codrops 视觉效果完成**，`npm run build` 通过。
+> **状态**：M1–M10（日语）+ M11–M18（法语）全部完成，22 个测试文件 / 181 个用例全绿，`tsc --noEmit` 干净；production build 受本机 Google Fonts 网络限制未能在本机跑通（与代码无关）。
 > **上轮工作**：完整 UI 重构（玻璃拟态 + 工业风 + 构成主义 + 包豪斯 + 日式夏日）、双栏布局、我的歌单。
-> **本轮工作**：SDF 镜头模糊效果 + Gooey 粘性搜索效果 + 构建环境坑点修复
+> **本轮工作**：多语言引擎 + 法语学习功能（IPA / 联诵 / 阴阳性 / 变位 / 意群 / CEFR / AI 释义增强）
 
 ## 一、产品定位
 
@@ -132,3 +132,51 @@ scripts/build-jlpt.mjs · public/kuromoji-dict/ · next.config.ts（outputFileTr
    - `DEEPSEEK_MODEL`（可选，默认 `deepseek-chat`）
    - `DEEPSEEK_BASE_URL`（可选，默认 `https://api.deepseek.com/v1`）
 4. 潜在后续：DeepSeek key 填入后验证翻译/笔记流；Vercel 部署（Node.js runtime/Fluid Compute，不用 edge）；修 ESLint 警告。
+
+## 十一、法语支持（M11–M18，2026-10-21）
+
+### 架构：通用多语言引擎，而不是法语分支
+
+- `src/lib/lang/`：`types.ts` / `meta.ts`（客户端安全）· `registry.server.ts`（仅服务端）· `ja.ts` / `fr.ts` · `prompts.ts`
+- `src/lib/fr/`：`lexicon.ts`（读 `src/data/fr/lexicon.json`）· `tokenize.ts` · `liaison.ts` · `chunks.ts` · `difficulty.ts` · `dictionary.ts` · `verbs.ts`
+- `/api/song` 读取可选 `lang`，通过 `getProfile(lang)` 分发；日语输出与改造前逐字段一致（已验证：夜に駆ける score 40 / intermediate / vocab 243 / unknown 60，且不含任何法语字段）。
+- **约束**：客户端组件绝不 import kuromoji 或 `lexicon.json`；新增语言只需实现 `LanguageProfile` 并在 registry 注册。
+
+### 法语本地标注（无 AI Key 也完整）
+
+- **词表**：Lexique383（CC BY-SA 4.0）→ 紧凑 JSON，约 5.2MB，仅服务端 `readFileSync`；`next.config.ts` 为 `/api/song`、`/api/dictionary` 配置精确 tracing key。
+- **分词**：`Intl.Segmenter("fr")` → 省音拆分（`J'ai` → `j'` + `ai`，保留 `aujourd'hui` / `quelqu'un`）→ 连字符（`peut-être` 保留，`Laisse-moi` 拆开）。
+- **发音**：Lexique `phon` 固定映射转 IPA；OOV 不给音标（不猜）。
+- **联诵**：规则 + h aspiré 名单；必须/可选/禁止三档；音素映射 `s/x/z→z, t/d→t, n→n, m→m, p→p, r→ʁ, g→k`；`et`、单数名词后、h aspiré 禁止。
+- **语法**：`genre` / `nombre`；`infover` 解析语气/时态/人称（`ind:pre:3s`、`cnd:pre:1s`、`par:pas`）。
+- **意群**：规则切分 np / vp / pp + 固定搭配表；标点处强制断块。
+- **难度**：lemma 词频排名 → CEFR A1≤600 / A2≤1800 / B1≤4000 / B2≤9000 / 其余 C1；`DifficultyScore.scheme = "cefr"`，UI 显示内容词平均等级。
+
+### AI 增强（可选）
+
+- `translate` / `notes` 全部带 `lang`，提示词按语言选择，缓存 key 形如 `translate:fr:{songId}`、`notes:fr:{songId}`（同形词/同歌不同语言不串味）。
+- 新增 `/api/annotate`：本地渲染后异步调用，按 lemma 去重后补 `gloss` / `note`；限额 200 lemma/首、60/次、最多 3 次，30 天缓存最多 50 首；`WordTooltip` 以 AI 徽章展示。未配置 key 时客户端不请求，路由返回 503 降级。
+- 合并原则：AI 只填 `gloss` / `glossNote`，本地 IPA / CEFR / 性别 / 变位永不覆盖。
+
+### 数据与进度
+
+- `src/data/fr/lexicon.json`（生成物，CC BY-SA 4.0）· `src/data/songs-fr.ts`（12 首法语种子歌单，含预计算 CEFR 难度）
+- localStorage：`vibe-lang:v1` 语言偏好；生词 `vibe-vocab:v1`、收藏 `vibe-playlist:v1` 新增可选 `lang`，旧数据缺省按 `ja` 处理，抽屉/歌单按语言分组。
+- 脚本：`scripts/build-fr-lexicon.mjs` · `scripts/build-songs-fr.mjs` · `scripts/verify-fr.mjs`
+- 测试：`fr/{tokenize,liaison,chunks,difficulty,lexicon,pipeline,annotate}.test.ts`、`lang/meta.test.ts`、`lang-prompts.test.ts`；全量 181 用例通过。
+
+### 验证记录（2026-10-21）
+
+`node scripts/verify-fr.mjs` 对 5 首歌全部通过：
+
+| 歌曲 | 行 | 词 | IPA | CEFR | 意群 | 联诵 | 未登录 | 难度 |
+|---|---|---|---|---|---|---|---|---|
+| La Vie en Rose | 39 | 250 | 216 | 216 | 42 | 11 | 12 | A1 |
+| Papaoutai | 71 | 519 | 391 | 391 | 132 | 25 | 27 | A1 |
+| Dernière danse | 44 | 347 | 290 | 290 | 94 | 16 | 2 | A2 |
+| Bruxelles je t'aime | 77 | 622 | 533 | 533 | 151 | 28 | 40 | A1 |
+| La bohème | 65 | 332 | 314 | 314 | 81 | 20 | 4 | A2 |
+
+- `/api/annotate` 无 key 实测返回 `503 {code:"ai_not_configured"}`。
+- 本机 `npm run build` 因 `fonts.gstatic.com` 不可达而失败（163 条字体请求警告），**与代码无关**；部署环境网络正常时应可构建。
+- 词表许可与署名见根目录 `THIRD_PARTY_NOTICES.md`。

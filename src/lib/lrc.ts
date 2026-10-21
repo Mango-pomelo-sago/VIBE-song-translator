@@ -7,7 +7,7 @@ import type { LyricLine } from "./types";
  * 不是真正的歌词，需剔除以免混入歌词并干扰 tlyric 对齐。
  */
 const META_LINE_RE =
-  /^(作词|作詞|作曲|编曲|編曲|制作人|製作人|监制|監制|混音|母带|母帯|和声|和音|吉他|贝斯|ベース|ドラム|ボーカル|钢琴|ピアノ|弦乐|ストリングス|歌词|歌詞|词|曲|歌|翻译|訳|翻译者|譯)\s*[:：]/;
+  /^(作词|作詞|作曲|编曲|編曲|制作人|製作人|监制|監制|混音|母带|母帯|和声|和音|吉他|贝斯|ベース|ドラム|ボーカル|钢琴|ピアノ|弦乐|ストリングス|歌词|歌詞|词|曲|歌|翻译|訳|翻译者|譯|paroles|musique|compos[ée]s?|écrit|produit|r[ée]alis[ée]|arrang[ée]|mix[ée]|lyrics|music|written|produced|arranged)\s*[:：]/i;
 
 function isMetaLine(text: string): boolean {
   return META_LINE_RE.test(text);

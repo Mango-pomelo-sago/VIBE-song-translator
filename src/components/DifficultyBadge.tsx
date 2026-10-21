@@ -30,6 +30,7 @@ export default function DifficultyBadge({ difficulty, compact }: Props) {
   const label = DIFFICULTY_LABELS[difficulty.level];
   const ratio = unknownRatio(difficulty);
   const approx = ratio > 0.5;
+  const scheme = difficulty.scheme === "cefr" ? "CEFR" : "JLPT";
 
   if (compact) {
     return (
@@ -39,7 +40,9 @@ export default function DifficultyBadge({ difficulty, compact }: Props) {
         title={
           approx
             ? `该曲目 ${difficulty.unknownCount}/${difficulty.vocabCount} 词未收录词表，难度为近似值`
-            : `难度分 ${difficulty.score}（${label}）`
+            : `难度分 ${difficulty.score}（${label}）· 内容词平均 ${scheme} 等级${
+                difficulty.averageLevel ? ` ${difficulty.averageLevel}` : ""
+              }`
         }
       >
         {label}
@@ -56,10 +59,15 @@ export default function DifficultyBadge({ difficulty, compact }: Props) {
         borderColor: color,
         color,
       }}
-      title={`内容词平均 JLPT 等级 → 难度分 ${difficulty.score}（0-100，越高越难）`}
+      title={`内容词平均 ${scheme} 等级 → 难度分 ${difficulty.score}（0-100，越高越难）`}
     >
       <span className="font-romaji text-lg font-bold">{Math.round(difficulty.score / 10)}/10</span>
       <span className="text-[11px] font-bold">{label}</span>
+      {difficulty.averageLevel ? (
+        <span className="font-romaji text-[10px] opacity-80">
+          平均 {difficulty.averageLevel}
+        </span>
+      ) : null}
       {approx ? (
         <span className="font-romaji text-[10px] opacity-70">覆盖率低 · 近似</span>
       ) : null}

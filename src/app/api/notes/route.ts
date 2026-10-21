@@ -6,6 +6,7 @@ import {
 } from "@/lib/ai-config-server";
 import type { ResolvedAiConfig } from "@/lib/ai";
 import { generateNotes } from "@/lib/notes";
+import { normalizeLang } from "@/lib/lang/meta";
 import type { ProcessedLine } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -13,7 +14,7 @@ export const dynamic = "force-dynamic";
 // 最多 2 次 AI 调用 × 30s 超时
 export const maxDuration = 90;
 
-/** POST /api/notes { songId, title, artist, lines } → { ok, notes: LearningNotes }
+/** POST /api/notes { songId, title, artist, lines, lang? } → { ok, notes: LearningNotes }
  *  可选请求头 x-ai-api-key / x-ai-base-url / x-ai-model。
  *  每首歌一次 AI 调用；缓存命中直接返回。 */
 export async function POST(req: NextRequest) {
@@ -22,11 +23,13 @@ export async function POST(req: NextRequest) {
     title?: string;
     artist?: string;
     lines?: ProcessedLine[];
+    lang?: unknown;
   } | null;
 
   const songId = body?.songId;
   const title = body?.title?.trim();
   const lines = body?.lines;
+  const lang = normalizeLang(body?.lang);
 
   if (typeof songId !== "number" || !Number.isInteger(songId) || !title) {
     return NextResponse.json({ ok: false, error: "invalid body" }, { status: 400 });
@@ -62,6 +65,7 @@ export async function POST(req: NextRequest) {
       body?.artist?.trim() ?? "",
       lines,
       config,
+      lang,
     );
     return NextResponse.json({ ok: true, notes });
   } catch (e) {

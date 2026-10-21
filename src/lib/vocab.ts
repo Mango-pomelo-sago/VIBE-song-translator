@@ -2,8 +2,10 @@
 
 /**
  * 生词本（localStorage，仅本机）。
- * M5 先提供最小收藏；M7 在其上加 VocabStore Context + 抽屉。
+ * 按语言隔离：同形词（如日语「愛」与法语 «ami»）不会互相覆盖。
  */
+
+import type { LangCode } from "./types";
 
 const KEY = "vibe-vocab:v1";
 
@@ -12,10 +14,16 @@ export type VocabItem = {
   basicForm: string;
   reading: string | null;
   romaji: string | null;
-  /** JLPT 等级或 null（未知） */
+  /** JLPT / CEFR 等级或 null（未知） */
   level: string | null;
+  /** 学习语言；旧数据缺省为日语 */
+  lang?: LangCode;
   addedAt: number;
 };
+
+export function vocabKey(item: Pick<VocabItem, "basicForm" | "lang">): string {
+  return `${item.lang ?? "ja"}:${item.basicForm}`;
+}
 
 export function loadVocab(): VocabItem[] {
   if (typeof window === "undefined") return [];
@@ -23,7 +31,9 @@ export function loadVocab(): VocabItem[] {
     const raw = localStorage.getItem(KEY);
     if (!raw) return [];
     const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? (arr as VocabItem[]) : [];
+    if (!Array.isArray(arr)) return [];
+    // 旧数据没有 lang，一律视为日语（只读兼容，不破坏性重写）
+    return (arr as VocabItem[]).map((i) => ({ ...i, lang: i.lang ?? "ja" }));
   } catch {
     return [];
   }
@@ -37,16 +47,17 @@ function persist(items: VocabItem[]) {
   }
 }
 
-export function hasVocab(basicForm: string): boolean {
-  return loadVocab().some((i) => i.basicForm === basicForm);
+export function hasVocab(basicForm: string, lang: LangCode = "ja"): boolean {
+  return loadVocab().some((i) => vocabKey(i) === vocabKey({ basicForm, lang }));
 }
 
 /** 收藏/取消收藏，返回最新列表 */
 export function toggleVocab(item: VocabItem): VocabItem[] {
   const items = loadVocab();
-  const idx = items.findIndex((i) => i.basicForm === item.basicForm);
+  const key = vocabKey(item);
+  const idx = items.findIndex((i) => vocabKey(i) === key);
   if (idx >= 0) items.splice(idx, 1);
-  else items.unshift(item);
+  else items.unshift({ ...item, lang: item.lang ?? "ja" });
   persist(items);
   return items;
 }

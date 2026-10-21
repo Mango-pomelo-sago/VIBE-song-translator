@@ -1,28 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchLyric } from "@/lib/netease";
 import { attachZh, parseLrc } from "@/lib/lrc";
-import { tokenizeLine } from "@/lib/japanese";
-import { segmentBunsetsu } from "@/lib/bunsetsu";
-import { scoreLines } from "@/lib/difficulty";
-import type {
-  MorphToken,
-  NeteaseSong,
-  ProcessedLine,
-  RubySegment,
-  SongData,
-} from "@/lib/types";
+import { getProfile, hasProfile } from "@/lib/lang/registry.server";
+import { normalizeLang } from "@/lib/lang/meta";
+import type { AnnotatedLine } from "@/lib/lang/types";
+import type { NeteaseSong, ProcessedLine, SongData } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 // 抓词重试 + kuromoji 冷启动加载词典 + 全文同步分词
 export const maxDuration = 60;
 
-/** POST /api/song { song: NeteaseSong } → { ok, data: SongData }
- *  主管线：抓词 → LRC 解析 → 对齐 tlyric → 分词 → 汉字假名对齐 → 罗马音。
- *  （M4+ 在此追加文节断句，M5 追加 JLPT 标注与难度） */
+/** POST /api/song { song: NeteaseSong, lang?: "ja" | "fr" } → { ok, data: SongData }
+ *  主管线：抓词 → LRC 解析 → 对齐 tlyric → 按语言选择 profile 标注 → 难度评分。 */
 export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => null)) as {
     song?: NeteaseSong;
+    lang?: unknown;
   } | null;
   const song = body?.song;
   const id = song?.id;
@@ -30,11 +24,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "invalid song" }, { status: 400 });
   }
 
+  const lang = normalizeLang(body?.lang);
+  if (!hasProfile(lang)) {
+    return NextResponse.json(
+      { ok: false, error: `暂不支持该语言：${lang}` },
+      { status: 400 },
+    );
+  }
+  const profile = getProfile(lang);
+
   try {
-    // 轻量预检：kuromoji 词典是否可正常工作
-    try { await tokenizeLine("テスト"); }
-    catch (e) {
-      console.error("[api/song] kuromoji init failed", e);
+    // 轻量预检：仅日语需要确认 kuromoji 词典可用
+    try {
+      await profile.preflight?.();
+    } catch (e) {
+      console.error("[api/song] profile preflight failed", lang, e);
       return NextResponse.json(
         { ok: false, error: "分词引擎未就绪，请检查词典安装" },
         { status: 503 },
@@ -58,23 +62,14 @@ export async function POST(req: NextRequest) {
 
     for (let i = 0; i < merged.length; i++) {
       const l = merged[i];
-      let tokens: MorphToken[] = [];
-      let ruby: RubySegment[] = [];
-      let romaji: string | null = null;
-      let bunsetsu: ProcessedLine["bunsetsu"];
+      let annotation: AnnotatedLine | null = null;
 
       if (l.text) {
         try {
-          tokens = await tokenizeLine(l.text);
-          ruby = tokens.flatMap((t) => t.ruby);
-          // M4：行罗马音改由文节给出（文节级拼接修复跨 token 促音，如 分かっ+た→wakatta）
-          bunsetsu = segmentBunsetsu(tokens);
-          romaji = bunsetsu.map((b) => b.romaji).filter(Boolean).join(" ") || null;
-          for (const t of tokens) {
-            if (t.warnings?.length) warnings.push(...t.warnings);
-          }
+          annotation = await profile.annotateLine(l.text);
+          warnings.push(...annotation.warnings);
         } catch (e) {
-          warnings.push(`tokenize fail line ${i}: ${e}`);
+          warnings.push(`annotate fail line ${i}: ${e}`);
         }
       }
 
@@ -84,16 +79,16 @@ export async function POST(req: NextRequest) {
         text: l.text,
         zh: l.zh ?? null,
         zhSource: l.zh ? "netease" : null,
-        tokens,
-        ruby,
-        romaji: romaji || null,
-        bunsetsu,
+        tokens: annotation?.tokens ?? [],
+        ruby: annotation?.ruby ?? [],
+        romaji: annotation?.readingLine ?? null,
+        // 空行/标注失败时保持 undefined，与改造前一致
+        bunsetsu: annotation ? annotation.chunks : undefined,
       });
     }
 
-    // M9：难度评分（内容词平均 JLPT 等级）
-    const difficulty = scoreLines(lines);
-    const data: SongData = { song, lines, warnings, difficulty };
+    const difficulty = profile.scoreDifficulty(lines);
+    const data: SongData = { song, lang, lines, warnings, difficulty };
     return NextResponse.json({ ok: true, data });
   } catch (e) {
     console.error("[api/song]", id, e);

@@ -2,7 +2,9 @@
 
 import { useRef, useState, type PointerEvent } from "react";
 import type { MorphToken } from "@/lib/types";
-import { colorFor, level } from "@/lib/jlpt";
+import { level } from "@/lib/jlpt";
+import { annotationModeFor, levelColor } from "@/lib/lang/meta";
+import { useLang } from "./LangProvider";
 import { useDisplayPrefs } from "./DisplayPrefs";
 import RubyText from "./RubyText";
 import WordTooltip from "./WordTooltip";
@@ -20,11 +22,14 @@ export default function TokenWord({ token }: { token: MorphToken }) {
   const anchorRef = useRef<HTMLSpanElement>(null);
   const lastPointer = useRef<"mouse" | "touch">("mouse");
   const { prefs } = useDisplayPrefs();
-  const lv = level(token.basicForm) ?? level(token.surface);
-  const color = colorFor(lv);
+  const { lang } = useLang();
+  // 法语等级直接来自 token（CEFR）；日语继续查本地 JLPT 词表
+  const lv = token.level ?? level(token.basicForm) ?? level(token.surface);
+  const color = levelColor(lang, lv);
+  const annotation = annotationModeFor(lang, prefs.furigana);
 
-  const hiddenMode = prefs.furigana === "hidden" && !revealed;
-  const effectiveMode = hiddenMode ? "hidden" : prefs.furigana;
+  const hiddenMode = annotation === "hidden" && !revealed;
+  const effectiveMode = hiddenMode ? "hidden" : annotation;
 
   function clearTimer() {
     if (timer.current) clearTimeout(timer.current);
@@ -48,10 +53,10 @@ export default function TokenWord({ token }: { token: MorphToken }) {
     if (lastPointer.current === "touch") {
       // 触屏：一次点按完成查词；隐藏档同时揭示注音
       setShow((s) => !s);
-      if (prefs.furigana === "hidden") setRevealed((r) => !r);
+      if (annotation === "hidden") setRevealed((r) => !r);
       return;
     }
-    if (prefs.furigana === "hidden") setRevealed((r) => !r);
+    if (annotation === "hidden") setRevealed((r) => !r);
   }
 
   return (
@@ -59,7 +64,7 @@ export default function TokenWord({ token }: { token: MorphToken }) {
       ref={anchorRef}
       className={
         "relative inline-block max-w-full " +
-        (prefs.furigana === "hidden" ? "cursor-pointer" : "cursor-default")
+        (annotation === "hidden" ? "cursor-pointer" : "cursor-default")
       }
       onPointerEnter={(e) => {
         if (e.pointerType === "mouse") enter();
@@ -69,7 +74,7 @@ export default function TokenWord({ token }: { token: MorphToken }) {
       }}
       onPointerDown={handlePointerDown}
       onClick={handleClick}
-      title={hiddenMode ? "点击显示注音" : undefined}
+      title={hiddenMode ? "点击显示发音标注" : undefined}
     >
       <span className="word-hover-line" style={color ? { color } : undefined}>
         <span className="word-hover-line-text">

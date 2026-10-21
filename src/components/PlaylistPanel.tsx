@@ -2,21 +2,24 @@
 
 import { Music, Star, X } from "lucide-react";
 import { usePlaylist } from "./PlaylistStore";
-import type { NeteaseSong } from "@/lib/types";
+import type { LangCode, NeteaseSong } from "@/lib/types";
 import DifficultyBadge from "./DifficultyBadge";
 import SdfLensBlur from "./SdfLensBlur";
 
 type Props = {
   onSelect: (song: NeteaseSong) => void;
   disabled?: boolean;
+  /** 当前学习语言：歌单按语言过滤，互不混杂 */
+  lang: LangCode;
 };
 
 /**
  * 「我的歌单」：展示已收藏歌曲，点击即加载歌词。
  * 右键/长按可移除该曲。
  */
-export default function PlaylistPanel({ onSelect, disabled }: Props) {
-  const { items, toggle } = usePlaylist();
+export default function PlaylistPanel({ onSelect, disabled, lang }: Props) {
+  const { items: all, toggle } = usePlaylist();
+  const items = all.filter((s) => (s.lang ?? "ja") === lang);
 
   return (
     <section className="glass-card relative" aria-label="我的歌单">

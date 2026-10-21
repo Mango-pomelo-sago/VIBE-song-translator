@@ -24,6 +24,9 @@
 .DS_Store
 *.pem
 
+# 法语词表原始数据（可重新下载，勿提交）
+/data/fr/raw/
+
 # debug
 npm-debug.log*
 yarn-debug.log*

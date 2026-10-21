@@ -2,11 +2,22 @@
 
 import { useMemo, useState } from "react";
 import { BookOpen, Star, X } from "lucide-react";
-import { colorFor, labelFor, levelNumber } from "@/lib/jlpt";
-import type { JlptLevel } from "@/lib/jlpt";
+import { LANG_META, levelBadgeLabel, levelColor } from "@/lib/lang/meta";
+import type { LangCode } from "@/lib/types";
+import { vocabKey } from "@/lib/vocab";
 import { useVocab } from "./VocabStore";
 
 type SortMode = "date" | "level";
+
+/** 等级排序权重：JLPT N5→N1 与 CEFR A1→C1 都是 1→5 */
+const LEVEL_RANK: Record<string, number> = {
+  N5: 1, N4: 2, N3: 3, N2: 4, N1: 5,
+  A1: 1, A2: 2, B1: 3, B2: 4, C1: 5,
+};
+
+function rankOf(lv: string | null): number {
+  return lv ? LEVEL_RANK[lv] ?? 99 : 99;
+}
 
 /** 生词本抽屉：跨歌曲汇总收藏的生词，可从歌词 tooltip 进入，也可从工具栏打开 */
 export default function VocabDrawer() {
@@ -15,19 +26,29 @@ export default function VocabDrawer() {
   const [sortMode, setSortMode] = useState<SortMode>("date");
   const count = items.length;
 
-  const sorted = useMemo(() => {
-    const copy = [...items];
-    if (sortMode === "date") {
-      copy.sort((a, b) => b.addedAt - a.addedAt);
-    } else {
-      copy.sort((a, b) => {
-        const ao = levelNumber(a.level as JlptLevel | null);
-        const bo = levelNumber(b.level as JlptLevel | null);
-        return ao - bo;
-      });
+  // 按语言分组；旧数据（无 lang）归入日语
+  const groups = useMemo(() => {
+    const byLang = new Map<LangCode, typeof items>();
+    for (const it of items) {
+      const l = it.lang ?? "ja";
+      const arr = byLang.get(l) ?? [];
+      arr.push(it);
+      byLang.set(l, arr);
     }
-    return copy;
+    return (["ja", "fr"] as LangCode[])
+      .filter((l) => byLang.has(l))
+      .map((l) => {
+        const arr = [...(byLang.get(l) ?? [])];
+        if (sortMode === "date") {
+          arr.sort((a, b) => b.addedAt - a.addedAt);
+        } else {
+          arr.sort((a, b) => rankOf(a.level) - rankOf(b.level));
+        }
+        return { lang: l, items: arr };
+      });
   }, [items, sortMode]);
+
+  const multiLang = groups.length > 1;
 
   return (
     <>
@@ -104,7 +125,7 @@ export default function VocabDrawer() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-3">
-              {sorted.length === 0 ? (
+              {groups.length === 0 ? (
                 <p className="flex items-center justify-center gap-1 p-4 text-center text-sm text-ink/45">
                   在歌词里 hover 单词，点击
                   <Star size={14} className="fill-bauhaus-blue text-bauhaus-blue" />
@@ -113,48 +134,67 @@ export default function VocabDrawer() {
                   会汇总到这里。
                 </p>
               ) : (
-                <ul className="flex flex-col gap-2">
-                  {sorted.map((it) => {
-                    const lv = (it.level ?? null) as JlptLevel | null;
-                    const lvColor = colorFor(lv);
-                    return (
-                      <li
-                        key={`${it.basicForm}:${it.addedAt}`}
-                        className="flex items-start justify-between gap-2 rounded-lg border border-glass-border bg-glass-bg px-3 py-2"
-                      >
-                        <div className="min-w-0">
-                          <p className="font-lyric truncate text-base font-bold leading-tight text-ink">
-                            {it.surface}
-                          </p>
-                          <p className="font-romaji truncate text-xs text-ink/55">
-                            {it.reading ?? ""}
-                            {it.romaji ? ` / ${it.romaji}` : ""}
-                          </p>
-                        </div>
-                        <div className="flex shrink-0 items-center gap-1.5">
-                          <span
-                            className="rounded-sm border px-1.5 py-0.5 text-[10px] font-bold uppercase"
-                            style={
-                              lvColor
-                                ? { color: lvColor, borderColor: lvColor }
-                                : { color: "#8a6da6", borderColor: "#8a6da6" }
-                            }
-                          >
-                            {lv ? `JLPT ${labelFor(lv)}` : "未知"}
-                          </span>
-                          <button
-                            onClick={() => toggle(it)}
-                            className="flex h-6 w-6 items-center justify-center rounded-md border border-glass-border text-ink/50 transition-colors hover:bg-glass-hover"
-                            title="移出生词本"
-                            aria-label={`移出 ${it.surface}`}
-                          >
-                            <X size={14} />
-                          </button>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
+                <div className="flex flex-col gap-4">
+                  {groups.map((g) => (
+                    <section key={g.lang}>
+                      {multiLang ? (
+                        <h4 className="font-sc mb-1.5 text-xs font-bold text-ink/50">
+                          {LANG_META[g.lang].uiName}
+                        </h4>
+                      ) : null}
+                      <ul className="flex flex-col gap-2">
+                        {g.items.map((it) => {
+                          const lv = it.level ?? null;
+                          const lvColor = levelColor(g.lang, lv);
+                          return (
+                            <li
+                              key={`${vocabKey(it)}:${it.addedAt}`}
+                              className="flex items-start justify-between gap-2 rounded-lg border border-glass-border bg-glass-bg px-3 py-2"
+                            >
+                              <div className="min-w-0">
+                                <p
+                                  className={`truncate text-base font-bold leading-tight text-ink ${
+                                    g.lang === "fr" ? "font-lyric-fr" : "font-lyric"
+                                  }`}
+                                >
+                                  {it.surface}
+                                </p>
+                                <p
+                                  className={`truncate text-xs text-ink/55 ${
+                                    g.lang === "fr" ? "font-ipa" : "font-romaji"
+                                  }`}
+                                >
+                                  {it.reading ?? ""}
+                                  {it.romaji ? ` / ${it.romaji}` : ""}
+                                </p>
+                              </div>
+                              <div className="flex shrink-0 items-center gap-1.5">
+                                <span
+                                  className="rounded-sm border px-1.5 py-0.5 text-[10px] font-bold uppercase"
+                                  style={
+                                    lvColor
+                                      ? { color: lvColor, borderColor: lvColor }
+                                      : { color: "#8a6da6", borderColor: "#8a6da6" }
+                                  }
+                                >
+                                  {levelBadgeLabel(g.lang, lv)}
+                                </span>
+                                <button
+                                  onClick={() => toggle(it)}
+                                  className="flex h-6 w-6 items-center justify-center rounded-md border border-glass-border text-ink/50 transition-colors hover:bg-glass-hover"
+                                  title="移出生词本"
+                                  aria-label={`移出 ${it.surface}`}
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </section>
+                  ))}
+                </div>
               )}
             </div>
 

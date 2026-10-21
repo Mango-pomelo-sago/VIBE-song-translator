@@ -8,6 +8,7 @@
 const KEY = "vibe-playlist:v1";
 
 import type {
+  LangCode,
   NeteaseAlbum,
   NeteaseArtist,
   NeteaseSong,
@@ -20,6 +21,8 @@ export type SavedSong = {
   artists: NeteaseArtist[];
   album: NeteaseAlbum | null;
   difficulty?: DifficultyScore | null;
+  /** 学习语言；旧数据缺省为日语 */
+  lang?: LangCode;
   addedAt: number;
 };
 
@@ -27,6 +30,7 @@ export type SavedSong = {
 export function toSavedSong(
   song: NeteaseSong,
   difficulty?: DifficultyScore | null,
+  lang: LangCode = "ja",
 ): SavedSong {
   return {
     id: song.id,
@@ -34,6 +38,7 @@ export function toSavedSong(
     artists: song.artists,
     album: song.album,
     difficulty,
+    lang,
     addedAt: Date.now(),
   };
 }
@@ -44,7 +49,9 @@ export function loadPlaylist(): SavedSong[] {
     const raw = localStorage.getItem(KEY);
     if (!raw) return [];
     const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? (arr as SavedSong[]) : [];
+    if (!Array.isArray(arr)) return [];
+    // 旧收藏没有 lang，一律归为日语
+    return (arr as SavedSong[]).map((s) => ({ ...s, lang: s.lang ?? "ja" }));
   } catch {
     return [];
   }
