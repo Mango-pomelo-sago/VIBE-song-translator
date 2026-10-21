@@ -37,13 +37,13 @@ const STEPS_FR = [
     n: "02",
     icon: Disc3,
     title: "读词",
-    desc: "单词上方标注阴阳性、单复数与时态人称，意群按语义分行。",
+    desc: "单词上方用颜色标注阴阳性、单复数与时态人称，意群按语义分组。",
   },
   {
     n: "03",
     icon: BookOpen,
     title: "查词",
-    desc: "hover 查看阴阳性、变位与 CEFR 等级，一键收藏生词。",
+    desc: "hover 或点按查看完整变位、CEFR 等级与释义，一键收藏生词。",
   },
 ];
 

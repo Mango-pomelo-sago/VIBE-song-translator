@@ -71,4 +71,47 @@ describe("segmentChunks", () => {
     const [c] = chunksOf("le petit chat");
     expect(c.gloss).toBeNull();
   });
+
+  it("主语、谓语与介词短语各自成组", () => {
+    const chunks = chunksOf("Je vois la vie en rose");
+    expect(chunks.map((c) => [c.kind, c.text])).toEqual([
+      ["vp", "Je vois"],
+      ["np", "la vie"],
+      ["pp", "en rose"],
+    ]);
+  });
+
+  it("谓语后的宾语另起名词短语", () => {
+    const chunks = chunksOf("Il me dit des mots");
+    expect(chunks.map((c) => c.text)).toEqual(["Il me dit", "des mots"]);
+  });
+
+  it("关系从句另起意群，不定式宾语不拆", () => {
+    const chunks = chunksOf("Des yeux qui font baisser les miens");
+    expect(chunks.map((c) => c.text)).toEqual([
+      "Des yeux",
+      "qui font",
+      "baisser les miens",
+    ]);
+  });
+
+  it("复合时态的助动词与分词不拆开", () => {
+    const chunks = chunksOf("J'ai perdu le nord");
+    expect(chunks).toHaveLength(1);
+    expect(chunks[0].kind).toBe("vp");
+  });
+
+  it("副词片段不会被介词误拆", () => {
+    expect(chunksOf("il me parle tout bas")).toHaveLength(1);
+  });
+
+  it("助动词被标为普通动词时仍不拆分词", () => {
+    const chunks = chunksOf("Il est entré dans mon coeur");
+    expect(chunks.map((c) => c.text)).toEqual(["Il est entré", "dans mon coeur"]);
+  });
+
+  it("连词短语 dès que 不当作关系从句拆开", () => {
+    const chunks = chunksOf("Et dès que je l'aperçois");
+    expect(chunks.map((c) => c.text)).toEqual(["Et dès que je l'aperçois"]);
+  });
 });

@@ -9,7 +9,9 @@ import { useAiSettings } from "./AiSettings";
 import RubyText from "./RubyText";
 import BunsetsuRomajiLine from "./BunsetsuRomajiLine";
 import TokenWord from "./TokenWord";
+import GrammarSummary from "./GrammarSummary";
 import SdfLensBlur from "./SdfLensBlur";
+import type { GrammarFocus } from "@/lib/fr/grammar";
 import {
   useLineTranslations,
   LineTranslation,
@@ -31,6 +33,11 @@ export default function LyricView({ data }: { data: SongData }) {
 
   // 法语：本地标注渲染后异步补中文释义；未配置 key 则完全不请求
   const [aiGloss, setAiGloss] = useState<Record<string, AiGloss>>({});
+  // 本曲语法筛选：切换歌曲时清空
+  const [grammarFocus, setGrammarFocus] = useState<GrammarFocus | null>(null);
+  useEffect(() => {
+    setGrammarFocus(null);
+  }, [data.song.id]);
   useEffect(() => {
     setAiGloss({});
     if (!isFr) return;
@@ -89,6 +96,13 @@ export default function LyricView({ data }: { data: SongData }) {
     <div className="glass-card relative p-4 sm:p-6">
       <SdfLensBlur />
       <div className="relative z-10">
+        {isFr ? (
+          <GrammarSummary
+            lines={data.lines}
+            focus={grammarFocus}
+            onChange={setGrammarFocus}
+          />
+        ) : null}
         {data.lines.map((l) => (
           <div key={l.index} className={rowClass}>
             {/* 歌词 */}
@@ -115,9 +129,18 @@ export default function LyricView({ data }: { data: SongData }) {
                       <Fragment key={i}>
                         {isFr && t.spaceBefore && i > 0 ? " " : null}
                         {isContent ? (
-                          <TokenWord token={token} />
+                          <TokenWord token={token} focus={grammarFocus} />
                         ) : (
-                          <span className={isFr && t.elision ? "elision-mark" : undefined}>
+                          <span
+                            className={
+                              isFr && t.elision ? "elision-mark cursor-help" : undefined
+                            }
+                            title={
+                              isFr && t.elision
+                                ? `省音：${t.elision.fullForm}`
+                                : undefined
+                            }
+                          >
                             <RubyText segments={t.ruby} />
                           </span>
                         )}

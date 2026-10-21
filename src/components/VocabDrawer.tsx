@@ -1,10 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { BookOpen, Star, X } from "lucide-react";
 import { LANG_META, levelBadgeLabel, levelColor } from "@/lib/lang/meta";
 import type { LangCode } from "@/lib/types";
-import { vocabKey } from "@/lib/vocab";
+import { FR_POS_ZH, genderNumberZh } from "@/lib/fr/labels";
+import { describeVerbZh } from "@/lib/fr/verbs";
+import { vocabKey, type VocabItem } from "@/lib/vocab";
 import { useVocab } from "./VocabStore";
 
 type SortMode = "date" | "level";
@@ -17,6 +20,19 @@ const LEVEL_RANK: Record<string, number> = {
 
 function rankOf(lv: string | null): number {
   return lv ? LEVEL_RANK[lv] ?? 99 : 99;
+}
+
+/** 生词本里的法语语法行：词性 · 性数 · 变位 */
+function frGrammarLine(it: VocabItem): string {
+  if (!it.pos && !it.verb) return "";
+  const parts: string[] = [];
+  if (it.pos) parts.push(FR_POS_ZH[it.pos] ?? it.pos);
+  if (it.pos === "NOUN" || it.pos === "ADJ") {
+    const gn = genderNumberZh(it.gender, it.number);
+    if (gn) parts.push(it.pos === "ADJ" ? `配合 ${gn}` : gn);
+  }
+  if (it.verb) parts.push(describeVerbZh(it.verb));
+  return parts.join(" · ");
 }
 
 /** 生词本抽屉：跨歌曲汇总收藏的生词，可从歌词 tooltip 进入，也可从工具栏打开 */
@@ -68,18 +84,20 @@ export default function VocabDrawer() {
         ) : null}
       </button>
 
-      {open ? (
-        <div className="glass-modal-overlay">
-          <div
-            className="absolute inset-0"
-            onClick={() => setOpen(false)}
-            aria-hidden
-          />
-          <aside
-            className="glass-modal absolute right-0 top-0 flex h-full w-80 max-w-[88vw] flex-col"
-            role="dialog"
-            aria-label="生词本"
-          >
+      {open
+        ? createPortal(
+            <div className="glass-modal-overlay">
+              <div
+                className="absolute inset-0"
+                onClick={() => setOpen(false)}
+                aria-hidden
+              />
+              <aside
+                className="glass-modal absolute right-0 top-0 flex w-80 max-w-[88vw] flex-col"
+                style={{ height: "100dvh", maxHeight: "100dvh" }}
+                role="dialog"
+                aria-label="生词本"
+              >
             <div className="flex items-center justify-between border-b border-glass-border p-4">
               <div>
                 <h3 className="font-sc text-lg font-bold text-ink">生词本</h3>
@@ -126,9 +144,12 @@ export default function VocabDrawer() {
 
             <div className="flex-1 overflow-y-auto p-3">
               {groups.length === 0 ? (
-                <p className="flex items-center justify-center gap-1 p-4 text-center text-sm text-ink/45">
-                  在歌词里 hover 单词，点击
-                  <Star size={14} className="fill-bauhaus-blue text-bauhaus-blue" />
+                <p className="p-6 text-center text-sm leading-relaxed text-ink/45">
+                  在歌词里 hover 或点按单词，点击
+                  <Star
+                    size={14}
+                    className="mx-0.5 inline-block -translate-y-px fill-bauhaus-blue align-middle text-bauhaus-blue"
+                  />
                   收藏后
                   <br />
                   会汇总到这里。
@@ -139,13 +160,14 @@ export default function VocabDrawer() {
                     <section key={g.lang}>
                       {multiLang ? (
                         <h4 className="font-sc mb-1.5 text-xs font-bold text-ink/50">
-                          {LANG_META[g.lang].uiName}
+                          {LANG_META[g.lang].uiName} · {g.items.length}
                         </h4>
                       ) : null}
                       <ul className="flex flex-col gap-2">
                         {g.items.map((it) => {
                           const lv = it.level ?? null;
                           const lvColor = levelColor(g.lang, lv);
+                          const frMeta = g.lang === "fr" ? frGrammarLine(it) : "";
                           return (
                             <li
                               key={`${vocabKey(it)}:${it.addedAt}`}
@@ -159,14 +181,29 @@ export default function VocabDrawer() {
                                 >
                                   {it.surface}
                                 </p>
-                                <p
-                                  className={`truncate text-xs text-ink/55 ${
-                                    g.lang === "fr" ? "font-ipa" : "font-romaji"
-                                  }`}
-                                >
-                                  {it.reading ?? ""}
-                                  {it.romaji ? ` / ${it.romaji}` : ""}
-                                </p>
+                                {frMeta ? (
+                                  <p className="font-sc mt-0.5 text-[10px] font-bold leading-snug text-ink/50">
+                                    {frMeta}
+                                  </p>
+                                ) : null}
+                                {it.gloss ? (
+                                  <p
+                                    className="font-sc mt-0.5 line-clamp-2 text-[11px] leading-snug text-ink/70"
+                                    title={it.gloss}
+                                  >
+                                    {it.gloss}
+                                  </p>
+                                ) : null}
+                                {it.reading || it.romaji ? (
+                                  <p
+                                    className={`mt-0.5 truncate text-xs text-ink/55 ${
+                                      g.lang === "fr" ? "font-ipa" : "font-romaji"
+                                    }`}
+                                  >
+                                    {it.reading ?? ""}
+                                    {it.romaji ? ` / ${it.romaji}` : ""}
+                                  </p>
+                                ) : null}
                               </div>
                               <div className="flex shrink-0 items-center gap-1.5">
                                 <span
@@ -211,9 +248,11 @@ export default function VocabDrawer() {
                 </button>
               </div>
             ) : null}
-          </aside>
-        </div>
-      ) : null}
+              </aside>
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }

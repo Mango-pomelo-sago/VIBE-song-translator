@@ -20,6 +20,8 @@ const TENSES: Record<string, string> = {
   pqp: "plus-que-parfait",
 };
 
+export type GrammarCategory = "m" | "f" | "verb" | "adj" | "adv";
+
 /**
  * 解析 Lexique 的 infover，例如 `ind:pre:3s`、`par:pas`、`inf`。
  * 无法识别时返回 null（UI 只显示原形，不编造变位）。
@@ -98,25 +100,32 @@ export function describeVerbZh(v: VerbInfo): string {
   return [mood + tense, person].filter(Boolean).join(" · ");
 }
 
-const SHORT_TENSE: Record<string, string> = {
-  présent: "prés.",
-  imparfait: "impar.",
-  futur: "fut.",
-  "passé simple": "p.s.",
-  "plus-que-parfait": "pqp",
-  passé: "passé",
-};
+/** 动词时态的中文短名（本曲语法速览用） */
+export function tenseLabelZh(v: VerbInfo): string {
+  if (v.mood === "infinitif") return "不定式";
+  if (v.mood === "participe") return v.tense === "passé" ? "过去分词" : "现在分词";
+  return TENSE_ZH[v.tense] ?? v.tense;
+}
 
 const SHORT_MOOD: Record<string, string> = {
-  indicatif: "",
-  subjonctif: "subj.",
-  conditionnel: "cond.",
-  impératif: "impér.",
-  infinitif: "inf.",
-  participe: "part.",
+  subjonctif: "虚拟",
+  conditionnel: "条件",
+  impératif: "命令",
 };
 
-/** 歌词内联语法标签：动词 → « prés. 3s »，名词 → « m. pl. » */
+const SHORT_TENSE: Record<string, string> = {
+  présent: "现",
+  imparfait: "未过",
+  futur: "将",
+  "passé simple": "简过",
+  "plus-que-parfait": "愈过",
+  passé: "过",
+};
+
+/**
+ * 歌词内联语法标签：面向中文学习者，尽量只占 1–3 个字。
+ * 名词 → « 阴复 »，形容词 → « 形·阴 »，动词 → « 现·3单 » / « 过去分 »。
+ */
 export function grammarTag(token: {
   pos: string;
   gender?: "m" | "f" | null;
@@ -125,21 +134,40 @@ export function grammarTag(token: {
 }): string | null {
   const v = token.verb;
   if (v) {
-    if (v.mood === "infinitif") return "inf.";
-    if (v.mood === "participe") return `part. ${v.tense === "passé" ? "passé" : "prés."}`;
-    const mood = SHORT_MOOD[v.mood] || "";
+    if (v.mood === "infinitif") return "不定式";
+    if (v.mood === "participe") return v.tense === "passé" ? "过去分" : "现在分";
+    const mood = SHORT_MOOD[v.mood] ?? "";
     const tense = SHORT_TENSE[v.tense] ?? v.tense;
-    const person = v.person ? `${v.person}${v.number === "pl" ? "p" : "s"}` : "";
-    return ["v.", mood, tense, person].filter(Boolean).join(" ");
+    const person = v.person ? `${v.person}${v.number === "pl" ? "复" : "单"}` : "";
+    return [mood, tense, person].filter(Boolean).join("·");
   }
-  const gender = token.gender === "f" ? "f." : token.gender === "m" ? "m." : "";
-  const number = token.number === "pl" ? "pl." : "";
+
+  const gender = token.gender === "f" ? "阴" : token.gender === "m" ? "阳" : "";
+  const number = token.number === "pl" ? "复" : "";
   if (token.pos === "NOUN") {
-    return ["n.", gender, number].filter(Boolean).join(" ");
+    const tag = `${gender}${number}`;
+    return tag || null;
   }
   if (token.pos === "ADJ") {
-    return ["adj.", gender, number].filter(Boolean).join(" ");
+    const tag = `形·${gender}${number}`;
+    return tag === "形·" ? "形" : tag;
   }
-  if (token.pos === "ADV") return "adv.";
+  if (token.pos === "ADV") return "副";
+  return null;
+}
+
+/** 语法标签配色分组：名词按阴阳性，其余按词类 */
+export function grammarCategory(token: {
+  pos: string;
+  gender?: "m" | "f" | null;
+}): GrammarCategory | null {
+  if (token.pos === "NOUN") {
+    if (token.gender === "m") return "m";
+    if (token.gender === "f") return "f";
+    return null;
+  }
+  if (token.pos === "VERB" || token.pos === "AUX") return "verb";
+  if (token.pos === "ADJ") return "adj";
+  if (token.pos === "ADV") return "adv";
   return null;
 }

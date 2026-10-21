@@ -34,6 +34,81 @@ const BOUNDARY_CONJ = new Set([
   "et", "mais", "car", "donc", "or", "ni", "puis", "quand", "si", "lorsque",
 ]);
 
+/** 关系代词：从句另起一个意群 */
+const RELATIVE_PRON = new Set([
+  "qui", "que", "qu'", "dont", "où", "lequel", "laquelle", "lesquels", "lesquelles",
+]);
+
+function isVerb(t: MorphToken): boolean {
+  return t.pos === "VERB" || t.pos === "AUX";
+}
+
+/** 变位动词（排除不定式与分词），用于判断是否已出现谓语 */
+function isFiniteVerb(t: MorphToken): boolean {
+  return isVerb(t) && t.verb?.mood !== "infinitif" && t.verb?.mood !== "participe";
+}
+
+function lastVerb(tokens: MorphToken[]): MorphToken | null {
+  for (let i = tokens.length - 1; i >= 0; i--) {
+    if (isVerb(tokens[i])) return tokens[i];
+  }
+  return null;
+}
+
+/**
+ * 是否在 t 之前断开。规则只做高置信切分：
+ * 关系代词 / 谓语后的新名词短语 / 介词短语 / 第二个谓语 / 主语后的谓语。
+ */
+function startsNewChunk(current: MorphToken[], t: MorphToken): boolean {
+  if (!current.length) return false;
+  const last = current[current.length - 1];
+
+  if (t.pos === "PRON" && RELATIVE_PRON.has(t.surface.toLowerCase())) {
+    // 「dès que」「avant que」「parce qu'」等连词短语不拆
+    const head = t.surface.toLowerCase().replace(/'$/, "");
+    if (
+      (head === "que" || head === "qu") &&
+      (last.pos === "PREP" || last.pos === "ADV" || last.pos === "CONJ")
+    ) {
+      return false;
+    }
+    return true;
+  }
+
+  if (t.pos === "DET" || t.pos === "NUM") {
+    const v = lastVerb(current);
+    // 已出现变位谓语（而非助动词+分词）时，冠词开启新的名词短语
+    return Boolean(v && isFiniteVerb(v) && last.pos !== "DET");
+  }
+
+  if (t.pos === "PREP") {
+    if (last.pos === "PREP" || last.pos === "DET") return false;
+    // 只由副词构成的片段（beaucoup de…）不拆
+    if (current.every((x) => x.pos === "ADV")) return false;
+    return current.some((x) => x.content) || isVerb(last);
+  }
+
+  if (isFiniteVerb(t)) {
+    // 只把「名词主语 + 谓语」拆开：le petit chat | dort；副词+代词不拆
+    const hasVerb = current.some(isVerb);
+    return (
+      !hasVerb &&
+      current.some((x) => x.pos === "NOUN" || x.pos === "ADJ")
+    );
+  }
+
+  if (isVerb(t)) {
+    // 复合时态：助动词 + 分词保持在同一意群（Lexique 有时把 est 标为 VER 而非 AUX）
+    if (t.verb?.mood === "participe" && current.some(isVerb)) {
+      return false;
+    }
+    const v = lastVerb(current);
+    return Boolean(v && isFiniteVerb(v));
+  }
+
+  return false;
+}
+
 function concatSurfaces(tokens: MorphToken[]): string {
   return tokens.map((t) => t.surface).join("").toLowerCase();
 }
@@ -148,6 +223,8 @@ export function segmentChunks(tokens: MorphToken[]): Bunsetsu[] {
       BOUNDARY_CONJ.has(t.surface.toLowerCase()) &&
       current.length
     ) {
+      flush();
+    } else if (startsNewChunk(current, t)) {
       flush();
     }
 

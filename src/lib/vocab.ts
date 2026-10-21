@@ -5,7 +5,7 @@
  * 按语言隔离：同形词（如日语「愛」与法语 «ami»）不会互相覆盖。
  */
 
-import type { LangCode } from "./types";
+import type { Gender, LangCode, VerbInfo } from "./types";
 
 const KEY = "vibe-vocab:v1";
 
@@ -19,6 +19,18 @@ export type VocabItem = {
   /** 学习语言；旧数据缺省为日语 */
   lang?: LangCode;
   addedAt: number;
+
+  // ---- 法语可选信息（旧数据没有，读取时按缺失处理）----
+  /** 词性（通用 POS：NOUN / VERB / ADJ…） */
+  pos?: string | null;
+  /** 名词/形容词的性 */
+  gender?: Gender | null;
+  /** 单复数 */
+  number?: "sg" | "pl" | null;
+  /** 动词变位信息 */
+  verb?: VerbInfo | null;
+  /** 收藏时的中文释义（AI 或词典） */
+  gloss?: string | null;
 };
 
 export function vocabKey(item: Pick<VocabItem, "basicForm" | "lang">): string {

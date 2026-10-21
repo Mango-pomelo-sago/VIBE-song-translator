@@ -3,8 +3,9 @@
 import { useRef, useState, type PointerEvent } from "react";
 import type { MorphToken } from "@/lib/types";
 import { level } from "@/lib/jlpt";
-import { annotationModeFor, levelColor } from "@/lib/lang/meta";
-import { grammarTag } from "@/lib/fr/verbs";
+import { FR_GRAMMAR_COLORS, annotationModeFor, levelColor } from "@/lib/lang/meta";
+import { grammarCategory, grammarTag } from "@/lib/fr/verbs";
+import { matchesGrammarFocus, type GrammarFocus } from "@/lib/fr/grammar";
 import { useLang } from "./LangProvider";
 import { useDisplayPrefs } from "./DisplayPrefs";
 import RubyText from "./RubyText";
@@ -16,7 +17,13 @@ import WordTooltip from "./WordTooltip";
  * 桌面走 hover（120ms 出现 / 220ms 消失，避免划过时闪烁）；触屏点按开合。
  * 注意：不要加 whitespace-nowrap，长日文句需要在 token 内部断行。
  */
-export default function TokenWord({ token }: { token: MorphToken }) {
+export default function TokenWord({
+  token,
+  focus = null,
+}: {
+  token: MorphToken;
+  focus?: GrammarFocus | null;
+}) {
   const [show, setShow] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -32,6 +39,11 @@ export default function TokenWord({ token }: { token: MorphToken }) {
 
   // 法语用语法标签替代发音：名词阴阳性/单复数、动词时态人称
   const grammar = isFr && prefs.showGrammar ? grammarTag(token) : null;
+  const grammarKind = grammar ? grammarCategory(token) : null;
+
+  // 本曲语法筛选：命中的词保持原样，其余内容词淡出
+  const dimmed = isFr && focus ? !matchesGrammarFocus(token, focus) : false;
+  const highlighted = isFr && !!focus && !dimmed;
 
   // 自测隐藏档只对日语有意义（法语不显示发音）
   const hiddenMode = !isFr && annotation === "hidden" && !revealed;
@@ -69,7 +81,9 @@ export default function TokenWord({ token }: { token: MorphToken }) {
     <span
       ref={anchorRef}
       className={
-        "relative inline-block max-w-full " +
+        "relative inline-block max-w-full transition-opacity " +
+        (dimmed ? "opacity-25 " : "") +
+        (highlighted ? "rounded-[4px] bg-bauhaus-yellow/20 " : "") +
         (hiddenMode ? "cursor-pointer" : "cursor-default")
       }
       onPointerEnter={(e) => {
@@ -87,7 +101,15 @@ export default function TokenWord({ token }: { token: MorphToken }) {
           {grammar ? (
             <ruby className="ruby-grammar">
               {token.surface}
-              <rt>{grammar}</rt>
+              <rt
+                style={
+                  grammarKind
+                    ? { color: FR_GRAMMAR_COLORS[grammarKind] }
+                    : undefined
+                }
+              >
+                {grammar}
+              </rt>
             </ruby>
           ) : (
             <RubyText segments={token.ruby} mode={effectiveMode} />

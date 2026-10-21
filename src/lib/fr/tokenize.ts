@@ -91,7 +91,7 @@ function tokenFromEntry(surface: string, entry: LexEntry | null): BuiltToken {
   }
 
   const pos = mapCgram(entry.cgram);
-  const isNoun = pos === "NOUN";
+  const showsAgreement = pos === "NOUN" || pos === "ADJ";
   const isVerb = pos === "VERB" || pos === "AUX";
 
   return {
@@ -106,8 +106,8 @@ function tokenFromEntry(surface: string, entry: LexEntry | null): BuiltToken {
     ipa: entry.ipa,
     level: entry.cefr,
     frequency: entry.frequency,
-    gender: isNoun ? entry.gender : null,
-    number: isNoun ? entry.nombre : null,
+    gender: showsAgreement ? entry.gender : null,
+    number: showsAgreement ? entry.nombre : null,
     verb: isVerb ? parseInfover(entry.infover, entry.lemma) : null,
   };
 }

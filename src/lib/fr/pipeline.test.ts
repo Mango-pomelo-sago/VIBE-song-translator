@@ -25,9 +25,12 @@ describe("法语标注管线（真实词表）", () => {
     expect(arrives.verb).toMatchObject({ infinitive: "arriver", mood: "participe" });
     expect(amis.number).toBe("pl");
 
-    expect(a.chunks.length).toBeGreaterThan(0);
+    // 名词主语与谓语分成两个意群，联诵各自保留在所属意群里
+    expect(a.chunks.map((c) => c.text)).toEqual(["Les amis", "sont arrivés"]);
+    expect(a.chunks[0].kind).toBe("np");
+    expect(a.chunks[1].kind).toBe("vp");
     expect(a.chunks[0].romaji).toContain("‿z");
-    expect(a.chunks[0].romaji).toContain("‿t");
+    expect(a.chunks[1].romaji).toContain("‿t");
     expect(a.ruby.some((r) => r.kind === "ipa")).toBe(true);
     expect(a.readingLine).toBeTruthy();
   });

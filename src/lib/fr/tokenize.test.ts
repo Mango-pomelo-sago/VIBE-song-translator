@@ -52,6 +52,12 @@ describe("tokenizeFrench", () => {
     expect(tokens.map((t) => t.spaceBefore)).toEqual([false, true]);
   });
 
+  it("省音后的宿主词不带多余空格", () => {
+    const tokens = tokenizeFrench("Il me l'a dit");
+    expect(tokens.map((t) => t.surface)).toEqual(["Il", "me", "l'", "a", "dit"]);
+    expect(tokens.map((t) => t.spaceBefore)).toEqual([false, true, true, false, true]);
+  });
+
   it("标点独立成 token", () => {
     const tokens = tokenizeFrench("Bonjour, le monde !");
     const puncts = tokens.filter((t) => t.pos === "PUNCT");
@@ -81,6 +87,13 @@ describe("tokenizeFrench", () => {
       person: 1,
       number: "sg",
     });
+  });
+
+  it("形容词保留性数，用于配合提示", () => {
+    const [petit] = tokenizeFrench("petit chat");
+    expect(petit.pos).toBe("ADJ");
+    expect(petit.gender).toBe("m");
+    expect(petit.number).toBe("sg");
   });
 
   it("IPA ruby 的 kind 为 ipa", () => {

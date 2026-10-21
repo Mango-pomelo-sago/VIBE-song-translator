@@ -1,7 +1,7 @@
 # 📋 项目交接总结：VIBE RECORDS（日语 / 法语歌曲学习网站）
 
 > **项目目录**：`d:\Vibe-song translate`（Next.js 15 App Router，git 仓库，分支 master）
-> **状态**：M1–M10（日语）+ M11–M18（法语）全部完成，24 个测试文件 / 196 个用例全绿，`tsc --noEmit` 干净；production build 受本机 Google Fonts 网络限制未能在本机跑通（与代码无关）。
+> **状态**：M1–M10（日语）+ M11–M18（法语）全部完成，25 个测试文件 / 214 个用例全绿，`tsc --noEmit` 与 ESLint 干净；production build 受本机 Google Fonts 网络限制未能在本机跑通（与代码无关）。
 > **上轮工作**：完整 UI 重构（玻璃拟态 + 工业风 + 构成主义 + 包豪斯 + 日式夏日）、双栏布局、我的歌单。
 > **本轮工作**：多语言引擎 + 法语学习功能（语法优先：阴阳性 / 变位 / 意群 / CEFR / AI 释义增强）
 
@@ -148,8 +148,9 @@ scripts/build-jlpt.mjs · public/kuromoji-dict/ · next.config.ts（outputFileTr
 - **分词**：`Intl.Segmenter("fr")` → 省音拆分（`J'ai` → `j'` + `ai`，保留 `aujourd'hui` / `quelqu'un`）→ 连字符（`peut-être` 保留，`Laisse-moi` 拆开）。
 - **发音（不再上屏）**：Lexique `phon` 固定映射仍会转出 IPA，保留在数据/生词本中；歌词与词卡不再显示 IPA——法语学习重点放在语法而非拼读。
 - **联诵/省音**：联诵规则（必须/可选/禁止、h aspiré 名单）仍在数据层；歌词上不再画 `‿`。省音 `l'` 保留虚线下划线，词卡提示完整形式。
-- **语法标注（核心）**：行内 ruby 显示紧凑语法标签（`n. m. pl.` / `v. prés. 3s` / `adj. f.` / `part. passé` / `inf.`），由 `DisplaySettings` 的「语法标注」开关控制；词卡用中文展示阳性/阴性、单数/复数、语气·时态·人称（如「直陈式现在时 · 第三人称单数」）与原形。
-- **意群**：规则切分 np / vp / pp + 固定搭配表；标点处强制断块；意群行显示法语原文分组（以 `/` 分隔）。
+- **语法标注（核心）**：行内 ruby 显示中文紧凑标签（名词 `阳` / `阴复`；形容词 `形·阴`；动词 `现·3单` / `虚拟·现·1复` / `条件·现·2单` / `不定式` / `过去分`），标签按类别着色（阳蓝 / 阴粉 / 动词琥珀 / 形容词青绿，见 `FR_GRAMMAR_COLORS`），由 `DisplaySettings` 的「语法标注」开关控制并附图例；词卡用中文展示阳性/阴性、单数/复数、冠词提示（le/la/les）、语气·时态·人称（如「直陈式现在时 · 第三人称单数」）与原形。
+- **本曲语法速览（`GrammarSummary.tsx` + `fr/grammar.ts`）**：歌词卡顶部统计本曲动词 / 阴性名词 / 阳性名词 / 形容词 / B1+ 词汇数量（按 lemma 去重）与动词时态分布；点击任一标签进入「语法聚焦」，整首歌中同类词高亮、其余淡出，再点取消。聚焦状态按歌曲重置。
+- **意群**：规则切分 np / vp / pp / collocation + 固定搭配表；除标点外还会在关系代词、变位谓语后的新名词短语、介词短语、第二个谓语处断开，复合时态（助动词 + 分词）保持同组；意群行以 `/` 分隔，用点状下划线与颜色区分类型，只有一个意群且非固定搭配时省略，避免重复整行。例：`Je vois / la vie / en rose`、`Des yeux / qui font / baisser les miens`。
 - **难度（复合评分）**：`score = clamp(8 + ((平均CEFR等级-1)/4)×62 + B1+词汇占比×100, 0, 100)`，档位 `<30` 入门 / `<45` 进阶 / `≥45` 挑战。只看平均等级时所有法语歌都会挤在 A1/A2，加入 B1+ 占比后才能区分进阶与挑战。
 
 ### AI 增强（可选）
@@ -163,7 +164,7 @@ scripts/build-jlpt.mjs · public/kuromoji-dict/ · next.config.ts（outputFileTr
 - `src/data/fr/lexicon.json`（生成物，CC BY-SA 4.0）· `src/data/songs-fr.ts`（24 首法语种子歌单，含预计算复合难度：9 入门 / 11 进阶 / 4 挑战）
 - localStorage：`vibe-lang:v1` 语言偏好；生词 `vibe-vocab:v1`、收藏 `vibe-playlist:v1` 新增可选 `lang`，旧数据缺省按 `ja` 处理，抽屉/歌单按语言分组。
 - 脚本：`scripts/build-fr-lexicon.mjs` · `scripts/build-songs-fr.mjs` · `scripts/verify-fr.mjs`
-- 测试：`fr/{tokenize,liaison,chunks,difficulty,lexicon,pipeline,annotate,dictionary,verbs}.test.ts`、`lang/meta.test.ts`、`lang-prompts.test.ts`；全量 196 用例通过。
+- 测试：`fr/{tokenize,liaison,chunks,difficulty,lexicon,pipeline,annotate,dictionary,verbs,grammar}.test.ts`、`lang/meta.test.ts`、`lang-prompts.test.ts`；全量 214 用例通过。
 
 ### 验证记录（2026-10-21）
 
@@ -180,5 +181,7 @@ scripts/build-jlpt.mjs · public/kuromoji-dict/ · next.config.ts（outputFileTr
 - `/api/annotate` 无 key 实测返回 `503 {code:"ai_not_configured"}`。
 - 语法优先改版（2026-10-22）：法语歌词移除 IPA/联诵上屏，改为行内语法标签 + 词卡中文语法徽章；`build:songs-fr` 重新预计算 24 首种子，三档均有曲目（入门 9 / 进阶 11 / 挑战 4）。
 - 无头 Chrome 实测法语首页：推荐三档分别显示 9/11/4 首；加载 Basique 后歌词出现 216 个 `.ruby-grammar` 标签、页面无 IPA 字符；悬停 `vais` 的词卡显示「直陈式现在时 · 第一人称单数 · 原形 aller」。
+- 语法速览与聚焦（2026-10-22）：La Vie en Rose 显示「动词 18 / 阴性名词 6 / 阳性名词 10 / 形容词 8 / B1+ 3」与「现在时 13 · 不定式 4 · 过去分词 1」；点击「动词」后 57 个词淡出、36 个动词高亮；意群切分增强后该曲 29/39 行有 ≥2 个意群（原仅 1 行）；390px 移动端无横向溢出。
+- 移动端走查（2026-10-22）：非 idle 状态（搜索结果 / 歌词）下面板在 <1024px 隐藏并回到页面顶部，避免结果与歌词被「我的歌单 / 按难度挑歌」推到首屏之外；搜索结果、报错、歌词三种状态都提供「返回挑歌」；`VocabDrawer` 改为 `createPortal` 到 `body` + `100dvh`，修复被 `animate-slide-in-right` 的 transform 约束、无法铺满全屏的问题。390×844 实测搜索 → 选曲全流程无横向溢出。
 - 本机 `npm run build` 因 `fonts.gstatic.com` 不可达而失败（163 条字体请求警告），**与代码无关**；部署环境网络正常时应可构建。
 - 词表许可与署名见根目录 `THIRD_PARTY_NOTICES.md`。

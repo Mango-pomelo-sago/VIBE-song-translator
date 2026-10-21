@@ -2,13 +2,21 @@
 
 import { FURIGANA_LABELS } from "@/lib/prefs";
 import type { FuriganaMode } from "@/lib/prefs";
-import { LANG_META, annotationModeFor } from "@/lib/lang/meta";
+import { FR_GRAMMAR_COLORS, LANG_META, annotationModeFor } from "@/lib/lang/meta";
 import { useLang } from "./LangProvider";
 import { useDisplayPrefs } from "./DisplayPrefs";
 import { AiSettingsButton } from "./AiSettings";
 import SdfLensBlur from "./SdfLensBlur";
 
 const JA_MODES: FuriganaMode[] = ["romaji", "kana", "hidden"];
+
+/** 行内语法标签的颜色图例，与 TokenWord 的 rt 颜色一致 */
+const GRAMMAR_LEGEND = [
+  { label: "阳", title: "阳性名词（le / un）", color: FR_GRAMMAR_COLORS.m },
+  { label: "阴", title: "阴性名词（la / une）", color: FR_GRAMMAR_COLORS.f },
+  { label: "动", title: "动词：时态 + 人称（如 现·3单）", color: FR_GRAMMAR_COLORS.verb },
+  { label: "形", title: "形容词：性数配合（如 形·阴复）", color: FR_GRAMMAR_COLORS.adj },
+];
 
 function Toggle({
   label,
@@ -55,11 +63,39 @@ export default function DisplaySettings() {
       <SdfLensBlur />
       <div className="relative z-10 flex flex-wrap items-center gap-x-5 gap-y-3 px-4 py-3">
         {isFr ? (
-          <Toggle
-            label="语法标注（阴阳性 / 时态）"
-            checked={prefs.showGrammar}
-            onChange={(v) => set({ showGrammar: v })}
-          />
+          <>
+            <Toggle
+              label="语法标注"
+              checked={prefs.showGrammar}
+              onChange={(v) => set({ showGrammar: v })}
+            />
+            {prefs.showGrammar ? (
+              <div
+                className="flex items-center gap-1.5"
+                aria-label="语法标签颜色图例"
+              >
+                <span className="font-sc text-[10px] font-bold text-ink/40">图例</span>
+                {GRAMMAR_LEGEND.map((g) => (
+                  <span
+                    key={g.label}
+                    className="flex items-center gap-0.5"
+                    title={g.title}
+                  >
+                    <span
+                      className="inline-block h-1.5 w-1.5 rounded-full"
+                      style={{ backgroundColor: g.color }}
+                    />
+                    <span
+                      className="font-sc text-[10px] font-bold"
+                      style={{ color: g.color }}
+                    >
+                      {g.label}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            ) : null}
+          </>
         ) : (
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-sc text-xs font-bold text-ink/60">

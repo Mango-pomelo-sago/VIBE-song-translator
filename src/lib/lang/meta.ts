@@ -38,7 +38,7 @@ export const LANG_META: Record<LangCode, LangMeta> = {
     locale: "fr-FR",
     searchPlaceholder: "输入法语歌名…",
     idleHeading: "输入法语歌名，跟着音乐学法语",
-    idleSubline: "阴阳性与变位 · 意群分组 · 悬停查词 · 中文翻译对照",
+    idleSubline: "阴阳性配色 · 时态变位 · 意群分组 · 悬停查词",
     annotationLabel: "语法",
     groupRowLabel: "意群分组",
   },
@@ -68,6 +68,15 @@ export function annotationModeFor(
   if (lang === "fr" && mode === "kana") return "romaji";
   return mode;
 }
+
+/** 法语行内语法标签配色：名词按阴阳性，动词/形容词各自一色 */
+export const FR_GRAMMAR_COLORS = {
+  m: "#1d4ed8",
+  f: "#be185d",
+  verb: "#b45309",
+  adj: "#0f766e",
+  adv: "#6b7280",
+} as const;
 
 /** CEFR 等级配色：A1 绿 → C1 红，与 JLPT 的视觉语言保持一致 */
 export const CEFR_COLORS: Record<string, string> = {

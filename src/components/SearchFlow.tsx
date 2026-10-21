@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { ArrowLeft } from "lucide-react";
 import SongCandidateCard from "./SongCandidateCard";
 import NowPlayingHeader from "./NowPlayingHeader";
 import LyricView from "./LyricView";
@@ -43,7 +44,18 @@ export default function SearchFlow({ searchQuery, lang }: Props) {
       prevQuery.current = q;
       handleSearch(q);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
+
+  /** 移动端回到页面顶部（挑歌面板会隐藏，内容从顶部开始） */
+  function scrollTopOnMobile() {
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 1023px)").matches
+    ) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }
 
   async function handleSearch(q: string) {
     setLastQuery(q);
@@ -51,6 +63,7 @@ export default function SearchFlow({ searchQuery, lang }: Props) {
     setError("");
     setSong(null);
     setData(null);
+    scrollTopOnMobile();
     try {
       const res = await fetch(`/api/search?s=${encodeURIComponent(q)}`);
       const json = await res.json();
@@ -90,10 +103,35 @@ export default function SearchFlow({ searchQuery, lang }: Props) {
       if (!json.ok) throw new Error(json.error ?? "歌词加载失败");
       setData(json.data as SongData);
       setStatus("song");
+      scrollTopOnMobile();
     } catch (e) {
       setStatus("error");
       setError(e instanceof Error ? e.message : "歌词加载失败，请稍后重试");
     }
+  }
+
+  /** 移动端从当前歌曲回到挑歌面板 */
+  function backToPicker() {
+    setStatus("idle");
+    setSong(null);
+    setData(null);
+    setError("");
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }
+
+  /** 移动端返回按钮：挑歌面板在非 idle 状态下隐藏，需要一个回到首页的入口 */
+  function backButton() {
+    return (
+      <button
+        onClick={backToPicker}
+        className="glass-card mb-4 flex items-center gap-1.5 px-3 py-1.5 font-sc text-xs font-bold text-ink/70 lg:hidden"
+      >
+        <ArrowLeft size={14} />
+        返回挑歌
+      </button>
+    );
   }
 
   function renderRightColumn() {
@@ -114,6 +152,7 @@ export default function SearchFlow({ searchQuery, lang }: Props) {
       case "results":
         return (
           <section className="animate-fade-up">
+            {backButton()}
             <p className="font-sc mb-3 text-sm font-semibold text-ink/70">
               「{lastQuery}」的搜索结果
             </p>
@@ -134,10 +173,13 @@ export default function SearchFlow({ searchQuery, lang }: Props) {
       case "song":
         return song && data ? (
           <div className="animate-slide-in-right space-y-4">
+            {backButton()}
             <NowPlayingHeader song={song} difficulty={data.difficulty} />
             <div className="flex flex-wrap items-stretch justify-between gap-3">
               <DisplaySettings />
-              <VocabDrawer />
+              <div className="ml-auto flex items-center">
+                <VocabDrawer />
+              </div>
             </div>
             <LyricView data={data} />
             <LearningNotesPanel song={song} lines={data.lines} lang={lang} />
@@ -145,10 +187,13 @@ export default function SearchFlow({ searchQuery, lang }: Props) {
         ) : null;
       case "error":
         return (
-          <ErrorState
-            message={error}
-            onRetry={lastQuery ? () => handleSearch(lastQuery) : undefined}
-          />
+          <div>
+            {backButton()}
+            <ErrorState
+              message={error}
+              onRetry={lastQuery ? () => handleSearch(lastQuery) : undefined}
+            />
+          </div>
         );
     }
   }
@@ -157,8 +202,14 @@ export default function SearchFlow({ searchQuery, lang }: Props) {
     <div className="flex flex-col gap-6">
       {/* 双栏布局 */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
-        {/* 左栏：我的歌单 + 按难度挑歌 */}
-        <aside className="flex flex-col gap-4">
+        {/* 左栏：我的歌单 + 按难度挑歌（移动端只在 idle 显示；搜索/歌词时隐藏，避免把内容推到首屏之外） */}
+        <aside
+          className={
+            status === "idle"
+              ? "flex flex-col gap-4"
+              : "hidden flex-col gap-4 lg:flex"
+          }
+        >
           <PlaylistPanel onSelect={handleSelect} disabled={busy} lang={lang} />
           <RecommendationPanel
             onSelect={handleSelect}

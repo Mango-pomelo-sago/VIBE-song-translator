@@ -305,13 +305,14 @@ body {
   text-transform: none;
 }
 
-/* 法语语法标签：替代发音标注，显示阴阳性/时态人称 */
+/* 法语语法标签：替代发音标注，显示阴阳性/时态人称；颜色由 TokenWord 按词类注入 */
 .ruby-grammar rt {
   font-family: var(--font-romaji);
-  font-size: 0.48em;
-  font-weight: 500;
+  font-size: 0.56em;
+  font-weight: 600;
   color: rgba(55, 65, 81, 0.55);
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
+  line-height: 1.15;
   text-transform: none;
 }
 

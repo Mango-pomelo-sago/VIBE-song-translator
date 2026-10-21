@@ -34,7 +34,7 @@ const mono = Geist_Mono({
 
 const TITLE = "VIBE RECORDS｜听日文歌学日语 · 听法语歌学法语";
 const DESCRIPTION =
-  "输入日文或法语歌名，抓取歌词并本地标注：日语罗马音/文节，法语 IPA/联诵/意群/阴阳性与变位；hover 查词、中文翻译对照——听着歌学外语。";
+  "输入日文或法语歌名，抓取歌词并本地标注：日语罗马音/文节，法语阴阳性/变位/意群/CEFR；hover 查词、中文翻译对照——听着歌学外语。";
 
 export const metadata: Metadata = {
   title: {

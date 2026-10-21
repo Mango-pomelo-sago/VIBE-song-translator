@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { Star, ArrowRight } from "lucide-react";
 import type { DictEntry, MorphToken } from "@/lib/types";
 import { describeVerbZh } from "@/lib/fr/verbs";
+import { FR_POS_ZH, articleHintZh, genderNumberZh } from "@/lib/fr/labels";
 import { fetchEntry } from "./DictionaryCache";
 import { level, normalizeJishoJlpt } from "@/lib/jlpt";
 import { levelBadgeLabel, levelColor } from "@/lib/lang/meta";
@@ -15,30 +16,18 @@ import { useLang } from "./LangProvider";
 const EDGE = 8; // 与视口边缘的最小间距
 const GAP = 6; // 与单词之间的间距
 
-/** 法语词性展示名 */
-const FR_POS: Record<string, string> = {
-  NOUN: "nom",
-  VERB: "verbe",
-  AUX: "auxiliaire",
-  ADJ: "adjectif",
-  ADV: "adverbe",
-  PRON: "pronom",
-  DET: "déterminant",
-  PREP: "préposition",
-  CONJ: "conjonction",
-  INTJ: "interjection",
-  NUM: "numéral",
-  UNK: "未知",
-};
-
 /** 语法标签的完整中文说明：阴阳性、单复数、动词变位 */
 function grammarBadges(token: MorphToken) {
   const out: string[] = [];
   if (token.pos === "NOUN" || token.pos === "ADJ") {
-    if (token.gender) out.push(token.gender === "m" ? "阳性" : "阴性");
-    if (token.number) out.push(token.number === "pl" ? "复数" : "单数");
-  } else if (token.number) {
-    out.push(token.number === "pl" ? "复数" : "单数");
+    const gn = genderNumberZh(token.gender, token.number);
+    if (gn) {
+      out.push(
+        token.pos === "NOUN"
+          ? `${gn} · ${articleHintZh(token.gender, token.number)}`
+          : `性数配合 · ${gn}`,
+      );
+    }
   }
   if (token.verb) {
     out.push(describeVerbZh(token.verb));
@@ -51,7 +40,7 @@ function grammarBadges(token: MorphToken) {
 
 /**
  * hover / tap 词卡：读音 + 等级徽章 + 词性 + 释义 + 收藏 + 词典外链。
- * 法语额外显示 IPA、阴阳性、变位、词频、联诵/省音。
+ * 法语额外显示阴阳性/冠词提示、性数配合、变位、词频、省音。
  *
  * 定位：渲染到 body 的 portal，`position: fixed` + 手动夹取到视口内。
  * 不能留在 token 内——祖先的 backdrop-filter / transform 会成为 fixed 的包含块。
@@ -173,9 +162,18 @@ export default function WordTooltip({
       basicForm: token.basicForm,
       reading: isFr ? token.ipa ?? null : token.reading,
       romaji: isFr ? null : token.romaji,
-      level: isFr ? token.level ?? null : lv,
+      level: isFr ? token.level ?? entry?.cefr?.[0] ?? null : lv,
       lang,
       addedAt: Date.now(),
+      ...(isFr
+        ? {
+            pos: token.pos,
+            gender: token.gender ?? null,
+            number: token.number ?? null,
+            verb: token.verb ?? null,
+            gloss: token.gloss ?? null,
+          }
+        : {}),
     };
     toggle(item);
   }
@@ -187,7 +185,7 @@ export default function WordTooltip({
     : jishoLv ?? localLv;
   const lvColor = levelColor(lang, lv);
   const displayWord = entry?.word ?? token.surface;
-  const posLabel = isFr ? FR_POS[token.pos] ?? token.pos : token.pos;
+  const posLabel = isFr ? FR_POS_ZH[token.pos] ?? "未知" : token.pos;
   const grammar = isFr ? grammarBadges(token) : [];
   const genericPa = (entry?.senses ?? [])
     .flatMap((s) =>
@@ -297,23 +295,30 @@ export default function WordTooltip({
           <p className="animate-pulse text-xs text-ink/50">查询中…</p>
         ) : state === "miss" || !entry ? (
           <p className="text-xs text-ink/50">
-            {isFr ? "暂无中文释义（Wiktionary 未收录）" : "暂无释义（Jisho 未收录）"}
+            {isFr ? "Wiktionary 暂无释义" : "暂无释义（Jisho 未收录）"}
           </p>
         ) : genericPa.length === 0 ? (
           <p className="text-xs text-ink/50">
             {isFr ? "本地词表已收录，暂无释义" : "暂无释义"}
           </p>
         ) : (
-          <ul className="space-y-1.5">
-            {genericPa.map((s, i) => (
-              <li key={i} className="text-xs leading-snug text-ink/85">
-                {s.pos ? (
-                  <span className="font-bold text-ink/50">{s.pos} · </span>
-                ) : null}
-                {s.text}
-              </li>
-            ))}
-          </ul>
+          <>
+            {isFr ? (
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-ink/35">
+                Wiktionary 英文释义
+              </p>
+            ) : null}
+            <ul className="space-y-1.5">
+              {genericPa.map((s, i) => (
+                <li key={i} className="text-xs leading-snug text-ink/85">
+                  {s.pos ? (
+                    <span className="font-bold text-ink/50">{s.pos} · </span>
+                  ) : null}
+                  {s.text}
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </div>
 
@@ -328,7 +333,7 @@ export default function WordTooltip({
         rel="noreferrer"
         className="mt-2 inline-flex items-center gap-0.5 text-xs font-semibold text-ink/60 underline decoration-bauhaus-blue/50 underline-offset-2 hover:text-bauhaus-blue"
       >
-        {isFr ? "在 Wiktionary 查看" : "在 Jisho 查看"}
+        {isFr ? "在法语 Wiktionary 查看" : "在 Jisho 查看"}
         <ArrowRight size={12} />
       </a>
     </div>,
