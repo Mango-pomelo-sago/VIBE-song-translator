@@ -33,16 +33,17 @@ export default function UsageGuide() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="bauhaus-btn bauhaus-btn-blue whitespace-nowrap text-sm"
+        className="bauhaus-btn bauhaus-btn-blue whitespace-nowrap px-2! text-sm sm:px-5!"
       >
-        使用说明
+        <span className="sm:hidden">说明</span>
+        <span className="hidden sm:inline">使用说明</span>
       </button>
 
       {open
         ? createPortal(
             <div className="glass-modal-overlay z-[9999]" onClick={() => setOpen(false)}>
               <div
-                className="glass-modal relative w-[32rem] max-w-[90vw] p-6"
+                className="glass-modal relative w-[32rem] max-w-[90vw] p-4 sm:p-6"
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* 关闭按钮 */}
@@ -58,11 +59,11 @@ export default function UsageGuide() {
                   使用说明
                 </h2>
 
-                <div className="flex flex-row gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row">
                   {STEPS.map((s, i) => (
                     <div
                       key={s.n}
-                      className="glass-card relative flex flex-1 flex-col items-center gap-2 p-3 text-center"
+                      className="glass-card relative flex flex-1 flex-row items-center gap-3 p-3 text-left sm:flex-col sm:items-center sm:gap-2 sm:text-center"
                       style={{ animationDelay: `${i * 80}ms` }}
                     >
                       <span
@@ -74,7 +75,7 @@ export default function UsageGuide() {
                       <div className="shrink-0 text-2xl" aria-hidden>
                         <s.icon />
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <h3 className="font-sc text-sm font-bold text-ink">
                           {s.title}
                         </h3>

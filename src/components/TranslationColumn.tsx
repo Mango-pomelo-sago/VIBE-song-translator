@@ -123,7 +123,7 @@ export function LineTranslation({
   const waiting = state.waiting(line.index);
 
   return (
-    <p className="font-sc relative text-sm leading-relaxed text-ink/80">
+    <p className="font-sc relative text-[13px] leading-relaxed text-ink/80 sm:text-sm">
       {text ? (
         <>
           {isAi ? (

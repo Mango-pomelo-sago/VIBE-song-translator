@@ -23,6 +23,14 @@ export default function LyricView({ data }: { data: SongData }) {
     transState.errorCode === "ai_not_configured" ||
     transState.errorCode === "ai_auth_failed";
 
+  // 移动端单列（译文紧随日文行下方）；md 起双列，xl 再放宽译文列。
+  // minmax(0,1fr) 而非 1fr：压掉 grid 子项的自动最小尺寸，避免被长歌词撑开。
+  const rowClass =
+    "mb-3 grid grid-cols-1 gap-y-1 md:gap-6 " +
+    (prefs.showTranslation
+      ? "md:grid-cols-[minmax(0,1fr)_200px] xl:grid-cols-[minmax(0,1fr)_280px]"
+      : "");
+
   return (
     <div className="glass-card relative p-4 sm:p-6">
       <SdfLensBlur />
@@ -30,17 +38,17 @@ export default function LyricView({ data }: { data: SongData }) {
         {data.lines.map((l) => (
           <div
             key={l.index}
-            className="mb-3 grid grid-cols-[1fr_280px] gap-6"
+            className={rowClass}
           >
             {/* 日文歌词 */}
-            <div>
-              <div className="font-lyric text-lg leading-relaxed text-ink">
+            <div className="min-w-0">
+              <div className="lyric-wrap font-lyric text-base leading-relaxed text-ink sm:text-lg">
                 {l.tokens && l.tokens.length ? (
                   l.tokens.map((t, i) =>
                     isContentWord(t.pos) ? (
                       <TokenWord key={i} token={t} />
                     ) : (
-                      <span key={i} className="whitespace-nowrap">
+                      <span key={i}>
                         <RubyText segments={t.ruby} />
                       </span>
                     ),
@@ -52,15 +60,17 @@ export default function LyricView({ data }: { data: SongData }) {
               {showBunsetsu && l.bunsetsu && l.bunsetsu.length ? (
                 <BunsetsuRomajiLine bunsetsu={l.bunsetsu} />
               ) : showBunsetsu && l.romaji ? (
-                <p className="font-romaji mt-0.5 text-xs leading-relaxed text-ink/55">
+                <p className="lyric-wrap font-romaji mt-0.5 text-xs leading-relaxed text-ink/55">
                   {l.romaji}
                 </p>
               ) : null}
             </div>
 
-            {/* 中文翻译 */}
+            {/* 中文翻译：移动端在行下，用左侧细线区分 */}
             {prefs.showTranslation ? (
-              <LineTranslation line={l} state={transState} />
+              <div className="min-w-0 border-l-2 border-bauhaus-blue/20 pl-2 md:border-0 md:pl-0">
+                <LineTranslation line={l} state={transState} />
+              </div>
             ) : null}
           </div>
         ))}

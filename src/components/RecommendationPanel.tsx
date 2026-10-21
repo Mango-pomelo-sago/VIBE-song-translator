@@ -64,7 +64,7 @@ export default function RecommendationPanel({ onSelect, disabled }: Props) {
             <Target size={18} className="text-bauhaus-blue" />
             按难度挑歌
           </h2>
-          <span className="font-romaji text-xs text-ink/50">难度由歌词内容词平均 JLPT 等级估算</span>
+          <span className="hidden shrink-0 font-romaji text-xs text-ink/50 sm:inline">难度由歌词内容词平均 JLPT 等级估算</span>
         </header>
 
         <div className="flex flex-col gap-0">

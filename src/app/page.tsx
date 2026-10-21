@@ -16,12 +16,17 @@ export default function Home() {
       <div className="relative min-h-screen">
         <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-6 sm:px-6 sm:py-8">
           {/* Header */}
-          <header className="animate-fade-up mb-6 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <VinylRecord size="md" />
+          <header className="animate-fade-up mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+            <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+              <span className="shrink-0 sm:hidden">
+                <VinylRecord size="sm" />
+              </span>
+              <span className="hidden shrink-0 sm:block">
+                <VinylRecord size="md" />
+              </span>
               <HomeTitle />
             </div>
-            <div className="flex items-center gap-3">
+            <div className="ml-auto flex items-center gap-2 sm:gap-3">
               <GooeySearchBar onSearch={setSearchQuery} />
               <UsageGuide />
             </div>

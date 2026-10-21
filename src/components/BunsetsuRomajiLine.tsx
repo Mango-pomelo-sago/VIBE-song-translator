@@ -6,9 +6,9 @@ import type { Bunsetsu } from "@/lib/types";
  */
 export default function BunsetsuRomajiLine({ bunsetsu }: { bunsetsu: Bunsetsu[] }) {
   return (
-    <p className="font-romaji mt-0.5 text-xs leading-relaxed text-ink/55">
+    <p className="lyric-wrap font-romaji mt-0.5 text-xs leading-relaxed text-ink/55">
       {bunsetsu.map((b, i) => (
-        <span key={i} className="mr-2 whitespace-nowrap">
+        <span key={i} className="mr-2 inline-block max-w-full">
           {b.romajiParts && b.romajiParts.length ? (
             b.romajiParts.map((p, j) => (
               <span

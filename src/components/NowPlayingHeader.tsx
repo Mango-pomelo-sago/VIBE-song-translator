@@ -25,10 +25,10 @@ export default function NowPlayingHeader({
   const favorited = has(song.id);
 
   return (
-    <div className="glass-card relative flex items-center gap-4 p-4 sm:p-5">
+    <div className="glass-card relative flex items-center gap-2 p-3 sm:gap-4 sm:p-5">
       {/* SDF 镜头模糊效果作为卡片背景 */}
       <SdfLensBlur />
-      <div className="relative z-10">
+      <div className="relative z-10 shrink-0 [&>svg]:h-14 [&>svg]:w-14 sm:[&>svg]:h-24 sm:[&>svg]:w-24">
         <RoseCurve size="lg" />
       </div>
       <div className="relative z-10 min-w-0 flex-1">
@@ -57,7 +57,10 @@ export default function NowPlayingHeader({
           }
         />
       </button>
-      <div className="relative z-10 shrink-0">
+      <div className="relative z-10 shrink-0 sm:hidden">
+        <DifficultyBadge difficulty={difficulty} compact />
+      </div>
+      <div className="relative z-10 hidden shrink-0 sm:block">
         <DifficultyBadge difficulty={difficulty} />
       </div>
     </div>

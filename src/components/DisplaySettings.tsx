@@ -48,7 +48,7 @@ export default function DisplaySettings() {
     <div className="glass-card relative">
       <SdfLensBlur />
       <div className="relative z-10 flex flex-wrap items-center gap-x-5 gap-y-3 px-4 py-3">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <span className="font-sc text-xs font-bold text-ink/60">注音</span>
         <div className="flex overflow-hidden rounded-lg border border-glass-border">
           {MODES.map((m) => (

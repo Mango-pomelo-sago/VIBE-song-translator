@@ -112,6 +112,28 @@
   }
 }
 
+/* ── 横向溢出兜底 ────────────────────────────── */
+/* clip 不创建滚动容器，不会破坏 sticky；hidden 仅作旧浏览器回退 */
+html,
+body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+@supports not (overflow-x: clip) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
+}
+
+/* 日文长句无空格，需要兜底断行；anywhere 同时压低 min-content，
+   使 grid/flex 轨道能真正收缩（break-word 不影响 min-content） */
+.lyric-wrap {
+  overflow-wrap: anywhere;
+  line-break: strict;
+}
+
 /* ── 夏日天空渐变背景 ──────────────────────── */
 body {
   background: linear-gradient(175deg, #38bdf8 0%, #7dd3fc 22%, #bae6fd 48%, #e0f2fe 78%, #f0f9ff 100%);

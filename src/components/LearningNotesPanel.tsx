@@ -87,10 +87,10 @@ export default function LearningNotesPanel({
           className="flex w-full items-center justify-between px-4 py-3"
           aria-expanded={open}
         >
-          <span className="flex items-center gap-2 font-sc text-sm font-bold text-ink">
+          <span className="flex min-w-0 items-center gap-2 text-left font-sc text-sm font-bold text-ink">
             <GraduationCap size={18} className="text-bauhaus-blue" />
             学习笔记
-            <span className="font-sc text-[10px] font-normal text-ink/45">
+            <span className="hidden font-sc text-[10px] font-normal text-ink/45 sm:inline">
               （AI 生成：背景 · 文化 · 语法）
             </span>
           </span>
