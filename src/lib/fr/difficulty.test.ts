@@ -38,15 +38,29 @@ describe("scoreFrenchLines", () => {
     expect(d!.level).toBe("beginner");
     expect(d!.averageLevel).toBe("A1");
     expect(d!.vocabCount).toBe(1);
+    expect(d!.score).toBe(8);
+    expect(d!.rareRatio).toBe(0);
   });
 
   it("B2/C1 → advanced", () => {
     const d = scoreFrenchLines([
       line([token("chatouiller", "VERB", "C1"), token("hiboux", "NOUN", "B2")]),
     ]);
-    expect(d!.score).toBe(90);
+    expect(d!.score).toBe(100);
     expect(d!.level).toBe("advanced");
     expect(d!.averageLevel).toBe("C1");
+    expect(d!.rareRatio).toBe(1);
+  });
+
+  it("少量 B1 词把曲目推进 intermediate", () => {
+    const tokens = [
+      ...Array.from({ length: 6 }, (_, i) => token(`mot${i}`, "NOUN", "A1")),
+      token("frontière", "NOUN", "B1"),
+      token("souffrir", "VERB", "B1"),
+    ];
+    const d = scoreFrenchLines([line(tokens)]);
+    expect(d!.rareRatio).toBe(0.25);
+    expect(d!.level).toBe("intermediate");
   });
 
   it("未知词不计均值但计入 unknownCount", () => {

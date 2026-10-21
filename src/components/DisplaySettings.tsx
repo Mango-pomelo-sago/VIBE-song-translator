@@ -9,13 +9,6 @@ import { AiSettingsButton } from "./AiSettings";
 import SdfLensBlur from "./SdfLensBlur";
 
 const JA_MODES: FuriganaMode[] = ["romaji", "kana", "hidden"];
-const FR_MODES: FuriganaMode[] = ["romaji", "hidden"];
-
-/** 法语没有假名档；罗马音档实际显示 IPA */
-const FR_LABELS: Partial<Record<FuriganaMode, string>> = {
-  romaji: "IPA",
-  hidden: FURIGANA_LABELS.hidden,
-};
 
 function Toggle({
   label,
@@ -49,44 +42,51 @@ function Toggle({
   );
 }
 
-/** 歌词显示偏好工具栏：注音三档 + 文节行/翻译列开关 */
+/** 歌词显示偏好工具栏：日语注音三档；法语改为语法标注开关 + 文节/意群行 + 翻译列 */
 export default function DisplaySettings() {
   const { prefs, set } = useDisplayPrefs();
   const { lang } = useLang();
   const meta = LANG_META[lang];
   const isFr = lang === "fr";
-  const modes = isFr ? FR_MODES : JA_MODES;
   const active = annotationModeFor(lang, prefs.furigana);
 
   return (
     <div className="glass-card relative">
       <SdfLensBlur />
       <div className="relative z-10 flex flex-wrap items-center gap-x-5 gap-y-3 px-4 py-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="font-sc text-xs font-bold text-ink/60">
-          {meta.annotationLabel}
-        </span>
-        <div className="flex overflow-hidden rounded-lg border border-glass-border">
-          {modes.map((m) => (
-            <button
-              key={m}
-              onClick={() => set({ furigana: m })}
-              className={`px-2.5 py-1 font-sc text-xs font-semibold transition-colors ${
-                active === m
-                  ? "bg-bauhaus-blue text-white-soft"
-                  : "bg-glass-bg text-ink/70 hover:bg-glass-hover"
-              }`}
-            >
-              {isFr ? FR_LABELS[m] ?? FURIGANA_LABELS[m] : FURIGANA_LABELS[m]}
-            </button>
-          ))}
-        </div>
-        {active === "hidden" ? (
-          <span className="font-sc text-[10px] text-ink/50">
-            点击歌词单词可临时显示{isFr ? "音标" : "注音"}（自测）
-          </span>
-        ) : null}
-      </div>
+        {isFr ? (
+          <Toggle
+            label="语法标注（阴阳性 / 时态）"
+            checked={prefs.showGrammar}
+            onChange={(v) => set({ showGrammar: v })}
+          />
+        ) : (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-sc text-xs font-bold text-ink/60">
+              {meta.annotationLabel}
+            </span>
+            <div className="flex overflow-hidden rounded-lg border border-glass-border">
+              {JA_MODES.map((m) => (
+                <button
+                  key={m}
+                  onClick={() => set({ furigana: m })}
+                  className={`px-2.5 py-1 font-sc text-xs font-semibold transition-colors ${
+                    active === m
+                      ? "bg-bauhaus-blue text-white-soft"
+                      : "bg-glass-bg text-ink/70 hover:bg-glass-hover"
+                  }`}
+                >
+                  {FURIGANA_LABELS[m]}
+                </button>
+              ))}
+            </div>
+            {active === "hidden" ? (
+              <span className="font-sc text-[10px] text-ink/50">
+                点击歌词单词可临时显示注音（自测）
+              </span>
+            ) : null}
+          </div>
+        )}
 
       <Toggle
         label={meta.groupRowLabel}

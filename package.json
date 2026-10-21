@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "node scripts/with-proxy.mjs next dev --turbopack",
     "build": "next build --turbopack",
-    "start": "next start",
+    "start": "node scripts/with-proxy.mjs next start",
     "lint": "eslint",
     "test": "vitest run",
     "build:fr-lexicon": "node scripts/build-fr-lexicon.mjs",

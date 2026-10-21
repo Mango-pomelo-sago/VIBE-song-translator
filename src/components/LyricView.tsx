@@ -3,7 +3,6 @@
 import { Fragment, useEffect, useState } from "react";
 import type { MorphToken, SongData } from "@/lib/types";
 import { isContentWord } from "@/lib/parts";
-import { annotationModeFor } from "@/lib/lang/meta";
 import { aiConfigHeaders, isAiConfigComplete, loadAiConfig } from "@/lib/ai-config";
 import { useDisplayPrefs } from "./DisplayPrefs";
 import { useAiSettings } from "./AiSettings";
@@ -16,12 +15,6 @@ import {
   LineTranslation,
 } from "./TranslationColumn";
 
-/** 法语联诵可写进排版（必须/可选），禁止联诵不显示 */
-function liaisonOf(t: MorphToken | undefined): string | null {
-  if (!t?.liaison || t.liaison.type === "forbidden") return null;
-  return t.liaison.phoneme;
-}
-
 type AiGloss = { gloss: string; note: string | null };
 
 /** 歌词视图：每行内嵌 grid 双栏，歌词与中文翻译天然对齐 */
@@ -31,8 +24,6 @@ export default function LyricView({ data }: { data: SongData }) {
   const showBunsetsu = prefs.showBunsetsu;
   const lang = data.lang ?? "ja";
   const isFr = lang === "fr";
-  const mode = annotationModeFor(lang, prefs.furigana);
-  const showLiaison = isFr && mode !== "hidden";
   const transState = useLineTranslations(data.song, data.lines, lang);
   const needsAiConfig =
     transState.errorCode === "ai_not_configured" ||
@@ -109,8 +100,6 @@ export default function LyricView({ data }: { data: SongData }) {
               >
                 {l.tokens && l.tokens.length ? (
                   l.tokens.map((t, i) => {
-                    const prev = l.tokens![i - 1];
-                    const join = showLiaison ? liaisonOf(prev) : null;
                     const isContent = t.content ?? isContentWord(t.pos);
                     // AI 只补 gloss / note，本地 IPA、CEFR、阴阳性、变位保持原值
                     const ai = aiGloss[t.basicForm.toLowerCase()];
@@ -124,7 +113,7 @@ export default function LyricView({ data }: { data: SongData }) {
                         : t;
                     return (
                       <Fragment key={i}>
-                        {isFr && t.spaceBefore && i > 0 && !join ? " " : null}
+                        {isFr && t.spaceBefore && i > 0 ? " " : null}
                         {isContent ? (
                           <TokenWord token={token} />
                         ) : (
@@ -132,11 +121,6 @@ export default function LyricView({ data }: { data: SongData }) {
                             <RubyText segments={t.ruby} />
                           </span>
                         )}
-                        {join ? (
-                          <span className="liaison-mark" aria-hidden>
-                            ‿{join}
-                          </span>
-                        ) : null}
                       </Fragment>
                     );
                   })
@@ -145,8 +129,8 @@ export default function LyricView({ data }: { data: SongData }) {
                 )}
               </div>
               {showBunsetsu && l.bunsetsu && l.bunsetsu.length ? (
-                <BunsetsuRomajiLine bunsetsu={l.bunsetsu} />
-              ) : showBunsetsu && l.romaji ? (
+                <BunsetsuRomajiLine bunsetsu={l.bunsetsu} lang={lang} />
+              ) : showBunsetsu && !isFr && l.romaji ? (
                 <p className="lyric-wrap font-romaji mt-0.5 text-xs leading-relaxed text-ink/55">
                   {l.romaji}
                 </p>

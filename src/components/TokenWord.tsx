@@ -4,6 +4,7 @@ import { useRef, useState, type PointerEvent } from "react";
 import type { MorphToken } from "@/lib/types";
 import { level } from "@/lib/jlpt";
 import { annotationModeFor, levelColor } from "@/lib/lang/meta";
+import { grammarTag } from "@/lib/fr/verbs";
 import { useLang } from "./LangProvider";
 import { useDisplayPrefs } from "./DisplayPrefs";
 import RubyText from "./RubyText";
@@ -23,12 +24,17 @@ export default function TokenWord({ token }: { token: MorphToken }) {
   const lastPointer = useRef<"mouse" | "touch">("mouse");
   const { prefs } = useDisplayPrefs();
   const { lang } = useLang();
+  const isFr = lang === "fr";
   // 法语等级直接来自 token（CEFR）；日语继续查本地 JLPT 词表
   const lv = token.level ?? level(token.basicForm) ?? level(token.surface);
   const color = levelColor(lang, lv);
   const annotation = annotationModeFor(lang, prefs.furigana);
 
-  const hiddenMode = annotation === "hidden" && !revealed;
+  // 法语用语法标签替代发音：名词阴阳性/单复数、动词时态人称
+  const grammar = isFr && prefs.showGrammar ? grammarTag(token) : null;
+
+  // 自测隐藏档只对日语有意义（法语不显示发音）
+  const hiddenMode = !isFr && annotation === "hidden" && !revealed;
   const effectiveMode = hiddenMode ? "hidden" : annotation;
 
   function clearTimer() {
@@ -51,12 +57,12 @@ export default function TokenWord({ token }: { token: MorphToken }) {
   }
   function handleClick() {
     if (lastPointer.current === "touch") {
-      // 触屏：一次点按完成查词；隐藏档同时揭示注音
+      // 触屏：一次点按完成查词；隐藏档同时揭示注音（仅日语）
       setShow((s) => !s);
-      if (annotation === "hidden") setRevealed((r) => !r);
+      if (!isFr && annotation === "hidden") setRevealed((r) => !r);
       return;
     }
-    if (annotation === "hidden") setRevealed((r) => !r);
+    if (!isFr && annotation === "hidden") setRevealed((r) => !r);
   }
 
   return (
@@ -64,7 +70,7 @@ export default function TokenWord({ token }: { token: MorphToken }) {
       ref={anchorRef}
       className={
         "relative inline-block max-w-full " +
-        (annotation === "hidden" ? "cursor-pointer" : "cursor-default")
+        (hiddenMode ? "cursor-pointer" : "cursor-default")
       }
       onPointerEnter={(e) => {
         if (e.pointerType === "mouse") enter();
@@ -78,7 +84,14 @@ export default function TokenWord({ token }: { token: MorphToken }) {
     >
       <span className="word-hover-line" style={color ? { color } : undefined}>
         <span className="word-hover-line-text">
-          <RubyText segments={token.ruby} mode={effectiveMode} />
+          {grammar ? (
+            <ruby className="ruby-grammar">
+              {token.surface}
+              <rt>{grammar}</rt>
+            </ruby>
+          ) : (
+            <RubyText segments={token.ruby} mode={effectiveMode} />
+          )}
         </span>
       </span>
       {show ? (

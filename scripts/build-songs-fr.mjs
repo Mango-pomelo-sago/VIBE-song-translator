@@ -22,6 +22,19 @@ const SONGS = [
   { id: 27856338, name: "Bella", artist: "GIMS", album: "Subliminal" },
   { id: 1888728442, name: "Bruxelles je t'aime", artist: "Angèle", album: "Nonante-cinq" },
   { id: 2308867, name: "Pour que tu m'aimes encore", artist: "Céline Dion", album: "D'eux" },
+  // 更难的一档：B1+ 词汇密度更高，用于填充「进阶 / 挑战」
+  { id: 565191980, name: "Basique", artist: "Orelsan", album: "La fête est finie" },
+  { id: 1471187227, name: "Bande organisée", artist: "13 Organisé", album: "13 Organisé" },
+  { id: 16430601, name: "La nuit je mens", artist: "Alain Bashung", album: "Fantaisie militaire" },
+  { id: 1871061509, name: "Désenchantée", artist: "Mylène Farmer", album: "L'Autre…" },
+  { id: 1294696149, name: "Les copains d'abord", artist: "Georges Brassens", album: "Les copains d'abord" },
+  { id: 528235489, name: "Chanson pour l'Auvergnat", artist: "Georges Brassens", album: "Chanson pour l'Auvergnat" },
+  { id: 16804485, name: "L'Aigle noir", artist: "Barbara", album: "L'Aigle noir" },
+  { id: 22417581, name: "Mistral gagnant", artist: "Renaud", album: "Mistral gagnant" },
+  { id: 3032071, name: "Sans contrefaçon", artist: "Mylène Farmer", album: "Ainsi soit je…" },
+  { id: 17762585, name: "La corrida", artist: "Francis Cabrel", album: "Samedi soir sur la Terre" },
+  { id: 17762589, name: "Je t'aimais, je t'aime, je t'aimerai", artist: "Francis Cabrel", album: "Samedi soir sur la Terre" },
+  { id: 1321708995, name: "Djadja", artist: "Aya Nakamura", album: "Nakamura" },
 ];
 
 async function fetchDifficulty(song) {
@@ -67,6 +80,7 @@ function row(song, difficulty) {
         unknownCount: difficulty.unknownCount,
         scheme: "cefr",
         averageLevel: difficulty.averageLevel ?? null,
+        rareRatio: difficulty.rareRatio ?? null,
       })
     : "null";
   return `  { id: ${song.id}, name: ${JSON.stringify(song.name)}, artists: ${artists}, album: ${album}, durationMs: null, difficulty: ${diff} },`;
@@ -79,7 +93,7 @@ for (const song of SONGS) {
 
 const content = `/**
  * 法语种子歌单（含预计算难度）。
- * 由 scripts/build-songs-fr.mjs 生成；难度为内容词平均 CEFR 等级 → 0-100 分。
+ * 由 scripts/build-songs-fr.mjs 生成；难度 = 内容词平均 CEFR 等级 + B1+ 词汇占比 → 0-100 分。
  * difficulty 为 null 表示尚未评分（歌曲可能暂时无歌词）。
  */
 import type { NeteaseSong } from "@/lib/types";

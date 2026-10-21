@@ -305,11 +305,14 @@ body {
   text-transform: none;
 }
 
-/* 法语 IPA：用覆盖面更广的字体栈，字号略大以避免音标过小 */
-.ruby-ipa rt {
-  font-family: var(--font-ipa);
-  font-size: 0.52em;
-  letter-spacing: 0;
+/* 法语语法标签：替代发音标注，显示阴阳性/时态人称 */
+.ruby-grammar rt {
+  font-family: var(--font-romaji);
+  font-size: 0.48em;
+  font-weight: 500;
+  color: rgba(55, 65, 81, 0.55);
+  letter-spacing: 0.01em;
+  text-transform: none;
 }
 
 /* 省音：l' / j' 等虚词用虚线下划线提示 */
@@ -317,16 +320,6 @@ body {
   text-decoration: underline dotted;
   text-decoration-color: rgba(2, 132, 199, 0.55);
   text-underline-offset: 3px;
-}
-
-/* 联诵标记：les‿z amis 中的连接符与音素 */
-.liaison-mark {
-  font-family: var(--font-ipa);
-  font-size: 0.72em;
-  font-weight: 600;
-  color: var(--color-bauhaus-blue);
-  letter-spacing: -0.01em;
-  user-select: none;
 }
 
 /* ── 选中 ──────────────────────────────────── */

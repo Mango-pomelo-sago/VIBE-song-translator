@@ -79,7 +79,7 @@ export default function RecommendationPanel({
           </h2>
           <span className="hidden shrink-0 font-romaji text-xs text-ink/50 sm:inline">
             {isFr
-              ? "难度由内容词平均 CEFR 等级估算"
+              ? "难度由内容词 CEFR 等级与 B1+ 词汇占比估算"
               : "难度由歌词内容词平均 JLPT 等级估算"}
           </span>
         </header>

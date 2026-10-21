@@ -11,12 +11,15 @@ export type DisplayPrefs = {
   showBunsetsu: boolean;
   /** 右侧中文翻译列 */
   showTranslation: boolean;
+  /** 法语：内容词上方显示语法标签（阴阳性 / 时态人称），替代发音标注 */
+  showGrammar: boolean;
 };
 
 export const DEFAULT_PREFS: DisplayPrefs = {
   furigana: "romaji",
   showBunsetsu: true,
   showTranslation: true,
+  showGrammar: true,
 };
 
 export const FURIGANA_LABELS: Record<FuriganaMode, string> = {
@@ -37,6 +40,7 @@ export function loadPrefs(): DisplayPrefs {
       furigana: parsed.furigana ?? DEFAULT_PREFS.furigana,
       showBunsetsu: parsed.showBunsetsu ?? DEFAULT_PREFS.showBunsetsu,
       showTranslation: parsed.showTranslation ?? DEFAULT_PREFS.showTranslation,
+      showGrammar: parsed.showGrammar ?? DEFAULT_PREFS.showGrammar,
     };
   } catch {
     return { ...DEFAULT_PREFS };

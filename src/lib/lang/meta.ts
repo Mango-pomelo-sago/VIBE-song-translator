@@ -38,8 +38,8 @@ export const LANG_META: Record<LangCode, LangMeta> = {
     locale: "fr-FR",
     searchPlaceholder: "输入法语歌名…",
     idleHeading: "输入法语歌名，跟着音乐学法语",
-    idleSubline: "IPA 音标 · 联诵/省音 · 意群分组 · 阴阳性与变位 · 中文翻译对照",
-    annotationLabel: "发音",
+    idleSubline: "阴阳性与变位 · 意群分组 · 悬停查词 · 中文翻译对照",
+    annotationLabel: "语法",
     groupRowLabel: "意群分组",
   },
 };

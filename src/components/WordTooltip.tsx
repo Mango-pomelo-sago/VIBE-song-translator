@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObje
 import { createPortal } from "react-dom";
 import { Star, ArrowRight } from "lucide-react";
 import type { DictEntry, MorphToken } from "@/lib/types";
-import { describeVerb } from "@/lib/fr/verbs";
+import { describeVerbZh } from "@/lib/fr/verbs";
 import { fetchEntry } from "./DictionaryCache";
 import { level, normalizeJishoJlpt } from "@/lib/jlpt";
 import { levelBadgeLabel, levelColor } from "@/lib/lang/meta";
@@ -31,11 +31,23 @@ const FR_POS: Record<string, string> = {
   UNK: "未知",
 };
 
-const LIAISON_LABEL = {
-  obligatory: "必须联诵",
-  optional: "可选联诵",
-  forbidden: "不联诵",
-} as const;
+/** 语法标签的完整中文说明：阴阳性、单复数、动词变位 */
+function grammarBadges(token: MorphToken) {
+  const out: string[] = [];
+  if (token.pos === "NOUN" || token.pos === "ADJ") {
+    if (token.gender) out.push(token.gender === "m" ? "阳性" : "阴性");
+    if (token.number) out.push(token.number === "pl" ? "复数" : "单数");
+  } else if (token.number) {
+    out.push(token.number === "pl" ? "复数" : "单数");
+  }
+  if (token.verb) {
+    out.push(describeVerbZh(token.verb));
+    if (token.verb.infinitive && token.verb.infinitive !== token.surface) {
+      out.push(`原形 ${token.verb.infinitive}`);
+    }
+  }
+  return out;
+}
 
 /**
  * hover / tap 词卡：读音 + 等级徽章 + 词性 + 释义 + 收藏 + 词典外链。
@@ -175,15 +187,8 @@ export default function WordTooltip({
     : jishoLv ?? localLv;
   const lvColor = levelColor(lang, lv);
   const displayWord = entry?.word ?? token.surface;
-  const reading = (isFr ? token.ipa : null) ?? entry?.reading ?? token.reading;
   const posLabel = isFr ? FR_POS[token.pos] ?? token.pos : token.pos;
-  const genderLabel =
-    isFr && token.gender
-      ? `${token.gender === "m" ? "le" : "la"} · ${token.gender}.`
-      : null;
-  const verbLabel =
-    isFr && token.verb ? describeVerb(token.verb) : null;
-  const liaison = isFr ? token.liaison : null;
+  const grammar = isFr ? grammarBadges(token) : [];
   const genericPa = (entry?.senses ?? [])
     .flatMap((s) =>
       isFr
@@ -221,10 +226,12 @@ export default function WordTooltip({
           >
             {displayWord}
           </div>
-          <p className="font-ipa mt-0.5 text-xs text-ink/60">
-            {reading ? reading : ""}
-            {!isFr && token.romaji ? ` / ${token.romaji}` : ""}
-          </p>
+          {!isFr ? (
+            <p className="font-ipa mt-0.5 text-xs text-ink/60">
+              {token.reading ?? ""}
+              {token.romaji ? ` / ${token.romaji}` : ""}
+            </p>
+          ) : null}
         </div>
         <button
           onClick={handleSave}
@@ -251,21 +258,14 @@ export default function WordTooltip({
             {posLabel}
           </span>
         ) : null}
-        {genderLabel ? (
-          <span className="rounded-sm border border-glass-border px-1.5 py-0.5 text-[10px] font-bold text-ink/50">
-            {genderLabel}
+        {grammar.map((label) => (
+          <span
+            key={label}
+            className="rounded-sm border border-bauhaus-blue/40 px-1.5 py-0.5 text-[10px] font-bold text-bauhaus-blue"
+          >
+            {label}
           </span>
-        ) : null}
-        {isFr && token.number ? (
-          <span className="rounded-sm border border-glass-border px-1.5 py-0.5 text-[10px] font-bold text-ink/50">
-            {token.number === "pl" ? "pl." : "sg."}
-          </span>
-        ) : null}
-        {verbLabel ? (
-          <span className="rounded-sm border border-glass-border px-1.5 py-0.5 text-[10px] font-bold text-ink/50">
-            {verbLabel}
-          </span>
-        ) : null}
+        ))}
         {isFr && token.frequency ? (
           <span className="rounded-sm border border-glass-border px-1.5 py-0.5 text-[10px] font-bold text-ink/50">
             词频 {Math.round(token.frequency)}/百万
@@ -274,18 +274,6 @@ export default function WordTooltip({
         {token.elision ? (
           <span className="rounded-sm border border-bauhaus-blue/40 px-1.5 py-0.5 text-[10px] font-bold text-bauhaus-blue">
             省音 · {token.elision.fullForm}
-          </span>
-        ) : null}
-        {liaison ? (
-          <span
-            className={`rounded-sm border px-1.5 py-0.5 text-[10px] font-bold ${
-              liaison.type === "forbidden"
-                ? "border-ink/20 text-ink/40"
-                : "border-bauhaus-blue/40 text-bauhaus-blue"
-            }`}
-          >
-            {LIAISON_LABEL[liaison.type]}
-            {liaison.phoneme ? ` /${liaison.phoneme}/` : ""}
           </span>
         ) : null}
       </div>

@@ -10,6 +10,8 @@ const MAX_CACHE = 300;
 
 function stripHtml(html: string): string {
   return html
+    // 先整块去掉 style/script，否则 CSS 文本会被当成释义保留
+    .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, "")
     .replace(/<[^>]*>/g, "")
     .replace(/&quot;/g, '"')
     .replace(/&#0?39;/g, "'")
@@ -26,7 +28,24 @@ type WiktionaryGroup = {
   definitions?: Array<{ definition?: string }>;
 };
 
-async function fetchWiktionary(word: string): Promise<DictSense | null> {
+type WiktionaryResult = {
+  sense: DictSense | null;
+  /** 结果是否可缓存：网络错误 / 429 等临时失败不缓存，下次 hover 再试 */
+  cacheable: boolean;
+};
+
+/** 同一个 IP 连发请求容易被 Wiktionary 限流，请求之间留出间隔 */
+const REQUEST_GAP_MS = 250;
+let lastRequestAt = 0;
+
+async function throttle(): Promise<void> {
+  const wait = lastRequestAt + REQUEST_GAP_MS - Date.now();
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+  lastRequestAt = Date.now();
+}
+
+async function fetchWiktionary(word: string): Promise<WiktionaryResult> {
+  await throttle();
   try {
     const res = await fetch(
       `${WIKTIONARY_URL}/${encodeURIComponent(word)}`,
@@ -35,7 +54,9 @@ async function fetchWiktionary(word: string): Promise<DictSense | null> {
         signal: AbortSignal.timeout(8000),
       },
     );
-    if (!res.ok) return null;
+    // 404 = 确实没有词条，可缓存；429/5xx/网络错误是临时失败，不能缓存
+    if (res.status === 404) return { sense: null, cacheable: true };
+    if (!res.ok) return { sense: null, cacheable: false };
     const data = (await res.json()) as Record<string, WiktionaryGroup[]>;
     const groups = data.fr ?? [];
     const definitions: string[] = [];
@@ -50,10 +71,15 @@ async function fetchWiktionary(word: string): Promise<DictSense | null> {
         partsOfSpeech.push(g.partOfSpeech);
       }
     }
-    if (definitions.length === 0 && partsOfSpeech.length === 0) return null;
-    return { english: [], definitions, lang: "en", partsOfSpeech };
+    if (definitions.length === 0 && partsOfSpeech.length === 0) {
+      return { sense: null, cacheable: true };
+    }
+    return {
+      sense: { english: [], definitions, lang: "en", partsOfSpeech },
+      cacheable: true,
+    };
   } catch {
-    return null;
+    return { sense: null, cacheable: false };
   }
 }
 
@@ -71,8 +97,12 @@ export async function lookupFrenchWord(
   if (cached !== undefined) return cached;
 
   const local = lookupLexicon(word) ?? (lemma ? lookupLexicon(lemma) : null);
-  const sense = await fetchWiktionary(local?.lemma ?? word);
+  const { sense, cacheable } = await fetchWiktionary(local?.lemma ?? word);
 
+  if (!local && !sense && !cacheable) {
+    // 远程临时失败：不写缓存，避免把一次超时固化成「查不到」
+    return null;
+  }
   if (!local && !sense) {
     CACHE.set(key, null);
     return null;
@@ -100,7 +130,8 @@ export async function lookupFrenchWord(
     const oldest = CACHE.keys().next().value;
     if (oldest !== undefined) CACHE.delete(oldest);
   }
-  CACHE.set(key, entry);
+  // 只有拿到确定结果才缓存：远程 429/超时留待下次重试
+  if (cacheable) CACHE.set(key, entry);
   return entry;
 }
 

@@ -25,11 +25,17 @@ describe("prefs localStorage 持久化", () => {
   });
 
   it("保存后读取一致", () => {
-    savePrefs({ furigana: "kana", showBunsetsu: false, showTranslation: true });
+    savePrefs({
+      furigana: "kana",
+      showBunsetsu: false,
+      showTranslation: true,
+      showGrammar: false,
+    });
     expect(loadPrefs()).toEqual({
       furigana: "kana",
       showBunsetsu: false,
       showTranslation: true,
+      showGrammar: false,
     });
   });
 
@@ -44,6 +50,7 @@ describe("prefs localStorage 持久化", () => {
       furigana: "hidden",
       showBunsetsu: true,
       showTranslation: true,
+      showGrammar: true,
     });
   });
 });

@@ -33,6 +33,8 @@ export type DifficultyScore = {
   scheme?: DifficultyScheme;
   /** 内容词最接近的平均等级，如 N4 / B1 */
   averageLevel?: string | null;
+  /** 法语：B1 及以上内容词占比（0-1），用于解释难度 */
+  rareRatio?: number | null;
 };
 
 export type ScoreTokensOptions = {
